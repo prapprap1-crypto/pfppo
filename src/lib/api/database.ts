@@ -34,11 +34,14 @@ export async function createPOHeader(poHeader: {
   grand_total?: number;
   status?: string;
   source_file?: string;
-  user_id: string;
 }) {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
   const { data, error } = await supabase
     .from('po_headers')
-    .insert(poHeader)
+    .insert({ ...poHeader, user_id: user.id })
     .select()
     .single();
   
@@ -188,13 +191,16 @@ export async function findMappingByCustomerCode(customerCode: string) {
 
 // Export History
 export async function createExportHistory(exportData: {
-  user_id: string;
   exported_pos: string[];
   file_name: string;
 }) {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
   const { data, error } = await supabase
     .from('export_history')
-    .insert(exportData)
+    .insert({ ...exportData, user_id: user.id })
     .select()
     .single();
   
