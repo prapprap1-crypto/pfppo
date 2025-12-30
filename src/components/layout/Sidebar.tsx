@@ -5,10 +5,12 @@ import {
   Layers, 
   FileCheck, 
   Download, 
-  Settings,
+  LogOut,
   FolderOpen 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
 
 const navItems = [
   { path: '/', label: 'แดชบอร์ด', icon: LayoutDashboard },
@@ -20,6 +22,7 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation();
+  const { signOut, user } = useAuth();
 
   return (
     <aside className="w-64 min-h-screen bg-sidebar flex flex-col">
@@ -55,12 +58,19 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Settings */}
+      {/* User & Logout */}
       <div className="p-4 border-t border-sidebar-border">
-        <Link to="/settings" className="nav-link">
-          <Settings className="w-5 h-5" />
-          <span>ตั้งค่า</span>
-        </Link>
+        <div className="text-xs text-sidebar-foreground/60 mb-2 truncate">
+          {user?.email}
+        </div>
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          onClick={signOut}
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          ออกจากระบบ
+        </Button>
       </div>
     </aside>
   );

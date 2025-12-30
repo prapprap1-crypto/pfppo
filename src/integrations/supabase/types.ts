@@ -14,7 +14,203 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      export_history: {
+        Row: {
+          exported_at: string
+          exported_pos: string[]
+          file_name: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          exported_at?: string
+          exported_pos: string[]
+          file_name: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          exported_at?: string
+          exported_pos?: string[]
+          file_name?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      po_headers: {
+        Row: {
+          branch: string
+          created_at: string
+          document_date: string
+          due_date: string
+          grand_total: number | null
+          id: string
+          net_total: number | null
+          po_number: string
+          source_file: string | null
+          status: string
+          supplier_code: string
+          supplier_name: string
+          updated_at: string
+          user_id: string | null
+          vat: number | null
+        }
+        Insert: {
+          branch: string
+          created_at?: string
+          document_date: string
+          due_date: string
+          grand_total?: number | null
+          id?: string
+          net_total?: number | null
+          po_number: string
+          source_file?: string | null
+          status?: string
+          supplier_code: string
+          supplier_name: string
+          updated_at?: string
+          user_id?: string | null
+          vat?: number | null
+        }
+        Update: {
+          branch?: string
+          created_at?: string
+          document_date?: string
+          due_date?: string
+          grand_total?: number | null
+          id?: string
+          net_total?: number | null
+          po_number?: string
+          source_file?: string | null
+          status?: string
+          supplier_code?: string
+          supplier_name?: string
+          updated_at?: string
+          user_id?: string | null
+          vat?: number | null
+        }
+        Relationships: []
+      }
+      po_items: {
+        Row: {
+          amount: number
+          created_at: string
+          customer_description: string | null
+          customer_product_code: string
+          delivery_date: string | null
+          id: string
+          is_mapped: boolean | null
+          po_id: string
+          quantity: number
+          unit: string | null
+          unit_price: number
+          vendor_description: string | null
+          vendor_product_code: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          customer_description?: string | null
+          customer_product_code: string
+          delivery_date?: string | null
+          id?: string
+          is_mapped?: boolean | null
+          po_id: string
+          quantity?: number
+          unit?: string | null
+          unit_price?: number
+          vendor_description?: string | null
+          vendor_product_code?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customer_description?: string | null
+          customer_product_code?: string
+          delivery_date?: string | null
+          id?: string
+          is_mapped?: boolean | null
+          po_id?: string
+          quantity?: number
+          unit?: string | null
+          unit_price?: number
+          vendor_description?: string | null
+          vendor_product_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "po_items_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "po_headers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_mappings: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          customer_code: string
+          customer_desc: string
+          id: string
+          unit: string | null
+          updated_at: string
+          vendor_code: string
+          vendor_desc: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          customer_code: string
+          customer_desc: string
+          id?: string
+          unit?: string | null
+          updated_at?: string
+          vendor_code: string
+          vendor_desc: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          customer_code?: string
+          customer_desc?: string
+          id?: string
+          unit?: string | null
+          updated_at?: string
+          vendor_code?: string
+          vendor_desc?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
