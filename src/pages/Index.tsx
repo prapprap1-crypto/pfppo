@@ -15,44 +15,44 @@ const Index = () => {
   const [stats, setStats] = useState(mockDashboardStats);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [headers, dashStats] = await Promise.all([
-          fetchPOHeaders(),
-          fetchDashboardStats()
-        ]);
-        
-        if (headers && headers.length > 0) {
-          // Transform database format to UI format
-          setPOHeaders(headers.map((h: any) => ({
-            id: h.id,
-            poNumber: h.po_number,
-            supplierCode: h.supplier_code,
-            supplierName: h.supplier_name,
-            branch: h.branch,
-            documentDate: h.document_date,
-            dueDate: h.due_date,
-            netTotal: Number(h.net_total),
-            vat: Number(h.vat),
-            grandTotal: Number(h.grand_total),
-            status: h.status,
-            sourceFile: h.source_file,
-            createdAt: h.created_at,
-            updatedAt: h.updated_at,
-          })));
-        }
-        
-        if (dashStats) {
-          setStats(dashStats as any);
-        }
-      } catch (error) {
-        console.log('Using mock data:', error);
-      } finally {
-        setLoading(false);
+  const loadData = async () => {
+    try {
+      const [headers, dashStats] = await Promise.all([
+        fetchPOHeaders(),
+        fetchDashboardStats()
+      ]);
+      
+      if (headers && headers.length > 0) {
+        // Transform database format to UI format
+        setPOHeaders(headers.map((h: any) => ({
+          id: h.id,
+          poNumber: h.po_number,
+          supplierCode: h.supplier_code,
+          supplierName: h.supplier_name,
+          branch: h.branch,
+          documentDate: h.document_date,
+          dueDate: h.due_date,
+          netTotal: Number(h.net_total),
+          vat: Number(h.vat),
+          grandTotal: Number(h.grand_total),
+          status: h.status,
+          sourceFile: h.source_file,
+          createdAt: h.created_at,
+          updatedAt: h.updated_at,
+        })));
       }
-    };
-    
+      
+      if (dashStats) {
+        setStats(dashStats as any);
+      }
+    } catch (error) {
+      console.log('Using mock data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -96,7 +96,7 @@ const Index = () => {
             <StatusChart stats={stats} />
             <div className="bg-card rounded-xl border p-5">
               <h3 className="font-semibold mb-4">นำเข้า PO ใหม่</h3>
-              <FileUploadZone maxFiles={5} />
+              <FileUploadZone maxFiles={5} onUploadComplete={loadData} />
             </div>
           </div>
         </div>
