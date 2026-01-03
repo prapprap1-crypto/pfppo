@@ -6,7 +6,9 @@ import {
   FileCheck, 
   Download, 
   LogOut,
-  FolderOpen 
+  FolderOpen,
+  Users,
+  UserCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,7 +20,8 @@ const navItems = [
   { path: '/mapping', label: 'Mapping สินค้า', icon: Layers },
   { path: '/verification', label: 'ตรวจสอบเอกสาร', icon: FileCheck },
   { path: '/export', label: 'ส่งออก Excel', icon: Download },
-  { path: '/users', label: 'จัดการผู้ใช้', icon: FileText },
+  { path: '/users', label: 'จัดการผู้ใช้', icon: Users },
+  { path: '/profile', label: 'โปรไฟล์', icon: UserCircle },
 ];
 
 export function Sidebar() {

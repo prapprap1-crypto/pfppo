@@ -329,6 +329,18 @@ export default function Users() {
                               <UserCog className="w-4 h-4 mr-2" />
                               เปลี่ยนบทบาท
                             </DropdownMenuItem>
+                            {u.id !== user?.id && (
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setSelectedUser(u);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                ลบผู้ใช้
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -383,6 +395,61 @@ export default function Users() {
             </Button>
             <Button onClick={handleRoleChange}>
               บันทึก
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ยืนยันการลบผู้ใช้</DialogTitle>
+            <DialogDescription>
+              คุณต้องการลบผู้ใช้ <strong>{selectedUser?.email}</strong> หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              ยกเลิก
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={async () => {
+                if (!selectedUser) return;
+                
+                try {
+                  // Delete from user_roles first
+                  await supabase
+                    .from('user_roles')
+                    .delete()
+                    .eq('user_id', selectedUser.id);
+                  
+                  // Delete from profiles
+                  await supabase
+                    .from('profiles')
+                    .delete()
+                    .eq('id', selectedUser.id);
+
+                  toast({
+                    title: 'สำเร็จ',
+                    description: `ลบผู้ใช้ ${selectedUser.email} แล้ว`
+                  });
+
+                  setDeleteDialogOpen(false);
+                  fetchUsers();
+                } catch (error) {
+                  console.error('Error deleting user:', error);
+                  toast({
+                    title: 'เกิดข้อผิดพลาด',
+                    description: 'ไม่สามารถลบผู้ใช้ได้',
+                    variant: 'destructive'
+                  });
+                }
+              }}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              ลบผู้ใช้
             </Button>
           </DialogFooter>
         </DialogContent>
