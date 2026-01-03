@@ -18,6 +18,7 @@ const navItems = [
   { path: '/mapping', label: 'Mapping สินค้า', icon: Layers },
   { path: '/verification', label: 'ตรวจสอบเอกสาร', icon: FileCheck },
   { path: '/export', label: 'ส่งออก Excel', icon: Download },
+  { path: '/users', label: 'จัดการผู้ใช้', icon: FileText },
 ];
 
 export function Sidebar() {

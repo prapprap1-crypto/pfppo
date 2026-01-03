@@ -9,6 +9,7 @@ import POList from "./pages/POList";
 import Mapping from "./pages/Mapping";
 import Verification from "./pages/Verification";
 import Export from "./pages/Export";
+import Users from "./pages/Users";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -45,6 +46,7 @@ function AppRoutes() {
       <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
       <Route path="/verification/:id" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
       <Route path="/export" element={<ProtectedRoute><Export /></ProtectedRoute>} />
+      <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
