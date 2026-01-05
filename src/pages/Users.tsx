@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -36,7 +38,8 @@ import {
   ShieldCheck, 
   User as UserIcon,
   MoreHorizontal,
-  Trash2
+  Trash2,
+  ShieldAlert
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -56,29 +59,34 @@ interface UserWithRole {
 
 export default function Users() {
   const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [newRole, setNewRole] = useState<string>('');
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  // Redirect non-admin users
   useEffect(() => {
-    fetchCurrentUserRole();
-    fetchUsers();
-  }, []);
+    if (!roleLoading && !isAdmin) {
+      toast({
+        title: 'ไม่มีสิทธิ์เข้าถึง',
+        description: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถเข้าถึงหน้านี้ได้',
+        variant: 'destructive'
+      });
+      navigate('/');
+    }
+  }, [isAdmin, roleLoading, navigate, toast]);
 
-  const fetchCurrentUserRole = async () => {
-    if (!user) return;
-    
-    const { data } = await supabase
-      .rpc('get_user_role', { _user_id: user.id });
-    
-    setCurrentUserRole(data);
-  };
+  useEffect(() => {
+    if (isAdmin) {
+      fetchUsers();
+    }
+  }, [isAdmin]);
 
   const fetchUsers = async () => {
     try {
@@ -191,7 +199,31 @@ export default function Users() {
     u.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const isAdmin = currentUserRole === 'admin';
+  // Show loading or redirect if not admin
+  if (roleLoading) {
+    return (
+      <MainLayout title="จัดการผู้ใช้งาน" subtitle="ดูและจัดการบัญชีผู้ใช้ทั้งหมดในระบบ">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span className="text-muted-foreground">กำลังตรวจสอบสิทธิ์...</span>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <MainLayout title="ไม่มีสิทธิ์เข้าถึง" subtitle="">
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+          <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+          <h2 className="text-xl font-bold text-foreground mb-2">ไม่มีสิทธิ์เข้าถึง</h2>
+          <p className="text-muted-foreground">เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถเข้าถึงหน้านี้ได้</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout title="จัดการผู้ใช้งาน" subtitle="ดูและจัดการบัญชีผู้ใช้ทั้งหมดในระบบ">

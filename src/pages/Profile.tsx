@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { User, Mail, Shield, ShieldCheck, Save, Loader2 } from 'lucide-react';
+import { User, Mail, Shield, ShieldCheck, Save, Loader2, Upload, Key } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function Profile() {
   const { user } = useAuth();
@@ -20,6 +28,15 @@ export default function Profile() {
   const [email, setEmail] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [role, setRole] = useState<string>('user');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Password change state
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -84,6 +101,131 @@ export default function Profile() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'ไฟล์ไม่ถูกต้อง',
+        description: 'กรุณาเลือกไฟล์รูปภาพเท่านั้น',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: 'ไฟล์ใหญ่เกินไป',
+        description: 'ขนาดไฟล์ต้องไม่เกิน 2MB',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      setAvatarUrl(publicUrl);
+
+      // Update profile
+      await supabase
+        .from('profiles')
+        .update({
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      toast({
+        title: 'สำเร็จ',
+        description: 'อัปโหลดรูปโปรไฟล์เรียบร้อยแล้ว'
+      });
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถอัปโหลดรูปได้',
+        variant: 'destructive'
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!newPassword || !confirmPassword) {
+      toast({
+        title: 'ข้อมูลไม่ครบ',
+        description: 'กรุณากรอกรหัสผ่านใหม่และยืนยันรหัสผ่าน',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: 'รหัสผ่านไม่ตรงกัน',
+        description: 'รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: 'รหัสผ่านสั้นเกินไป',
+        description: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'สำเร็จ',
+        description: 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว'
+      });
+
+      setPasswordDialogOpen(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: error.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้',
+        variant: 'destructive'
+      });
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -198,18 +340,35 @@ export default function Profile() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="avatarUrl">
-                URL รูปโปรไฟล์
-              </Label>
-              <Input
-                id="avatarUrl"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://example.com/avatar.jpg"
-              />
+              <Label>รูปโปรไฟล์</Label>
+              <div className="flex items-center gap-4">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  {uploading ? 'กำลังอัปโหลด...' : 'อัปโหลดรูป'}
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  ขนาดไม่เกิน 2MB (JPG, PNG, GIF)
+                </span>
+              </div>
             </div>
 
-            <div className="pt-4">
+            <div className="pt-4 flex gap-2">
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -219,6 +378,23 @@ export default function Profile() {
                 บันทึกข้อมูล
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Security Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>ความปลอดภัย</CardTitle>
+            <CardDescription>จัดการรหัสผ่านและความปลอดภัยของบัญชี</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              onClick={() => setPasswordDialogOpen(true)}
+            >
+              <Key className="w-4 h-4 mr-2" />
+              เปลี่ยนรหัสผ่าน
+            </Button>
           </CardContent>
         </Card>
 
@@ -244,6 +420,56 @@ export default function Profile() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Password Change Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>เปลี่ยนรหัสผ่าน</DialogTitle>
+            <DialogDescription>
+              กรอกรหัสผ่านใหม่ที่ต้องการใช้งาน
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">รหัสผ่านใหม่</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="กรอกรหัสผ่านใหม่"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">ยืนยันรหัสผ่านใหม่</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>
+              ยกเลิก
+            </Button>
+            <Button onClick={handlePasswordChange} disabled={changingPassword}>
+              {changingPassword ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Key className="w-4 h-4 mr-2" />
+              )}
+              เปลี่ยนรหัสผ่าน
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
