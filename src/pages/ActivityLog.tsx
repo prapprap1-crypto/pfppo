@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { th } from 'date-fns/locale';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
-import { getActionLabel } from '@/hooks/useActivityLog';
+import { getActionLabel, ActivityAction } from '@/hooks/useActivityLog';
 import { 
   Table, 
   TableBody, 
@@ -14,7 +16,21 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   Search, 
   Activity, 
@@ -25,10 +41,13 @@ import {
   FileText, 
   Upload, 
   Trash2,
-  Shield
+  Shield,
+  CalendarIcon,
+  X
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface ActivityLog {
+interface ActivityLogEntry {
   id: string;
   user_id: string;
   action: string;
@@ -41,6 +60,24 @@ interface ActivityLog {
     email: string | null;
   };
 }
+
+const actionTypes: { value: ActivityAction | 'all'; label: string }[] = [
+  { value: 'all', label: 'ทั้งหมด' },
+  { value: 'login', label: 'เข้าสู่ระบบ' },
+  { value: 'logout', label: 'ออกจากระบบ' },
+  { value: 'password_changed', label: 'เปลี่ยนรหัสผ่าน' },
+  { value: 'profile_updated', label: 'อัปเดตโปรไฟล์' },
+  { value: 'avatar_uploaded', label: 'อัปโหลดรูปโปรไฟล์' },
+  { value: 'po_created', label: 'สร้าง PO' },
+  { value: 'po_updated', label: 'อัปเดต PO' },
+  { value: 'po_deleted', label: 'ลบ PO' },
+  { value: 'po_exported', label: 'ส่งออก PO' },
+  { value: 'mapping_created', label: 'สร้าง Mapping' },
+  { value: 'mapping_updated', label: 'อัปเดต Mapping' },
+  { value: 'mapping_deleted', label: 'ลบ Mapping' },
+  { value: 'role_changed', label: 'เปลี่ยนบทบาท' },
+  { value: 'user_deleted', label: 'ลบผู้ใช้' },
+];
 
 const getActionIcon = (action: string) => {
   switch (action) {
@@ -81,9 +118,12 @@ const getActionBadgeVariant = (action: string): 'default' | 'secondary' | 'destr
 export default function ActivityLog() {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [logs, setLogs] = useState<ActivityLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [actionFilter, setActionFilter] = useState<string>('all');
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (user) {
@@ -95,7 +135,6 @@ export default function ActivityLog() {
     try {
       setLoading(true);
       
-      // Admin sees all logs, users see only their own
       let query = supabase
         .from('activity_logs')
         .select('*')
@@ -110,7 +149,6 @@ export default function ActivityLog() {
 
       if (error) throw error;
 
-      // Fetch user profiles for admin view
       if (isAdmin && data && data.length > 0) {
         const userIds = [...new Set(data.map(log => log.user_id))];
         const { data: profiles } = await supabase
@@ -123,9 +161,9 @@ export default function ActivityLog() {
           profiles: profiles?.find(p => p.id === log.user_id) || null
         }));
 
-        setLogs(logsWithProfiles as ActivityLog[]);
+        setLogs(logsWithProfiles as ActivityLogEntry[]);
       } else {
-        setLogs(data as ActivityLog[]);
+        setLogs(data as ActivityLogEntry[]);
       }
     } catch (error) {
       console.error('Error fetching activity logs:', error);
@@ -134,20 +172,35 @@ export default function ActivityLog() {
     }
   };
 
+  const clearFilters = () => {
+    setSearchTerm('');
+    setActionFilter('all');
+    setStartDate(undefined);
+    setEndDate(undefined);
+  };
+
   const filteredLogs = logs.filter(log => {
     const searchLower = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = 
       getActionLabel(log.action).toLowerCase().includes(searchLower) ||
       log.entity_type?.toLowerCase().includes(searchLower) ||
       log.profiles?.full_name?.toLowerCase().includes(searchLower) ||
-      log.profiles?.email?.toLowerCase().includes(searchLower)
-    );
+      log.profiles?.email?.toLowerCase().includes(searchLower);
+
+    const matchesAction = actionFilter === 'all' || log.action === actionFilter;
+
+    const logDate = new Date(log.created_at);
+    const matchesStartDate = !startDate || logDate >= startDate;
+    const matchesEndDate = !endDate || logDate <= new Date(endDate.getTime() + 86400000);
+
+    return matchesSearch && matchesAction && matchesStartDate && matchesEndDate;
   });
+
+  const hasActiveFilters = searchTerm || actionFilter !== 'all' || startDate || endDate;
 
   return (
     <MainLayout title="ประวัติการใช้งาน" subtitle="ดูประวัติกิจกรรมในระบบ">
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">ประวัติการใช้งาน</h1>
@@ -155,20 +208,71 @@ export default function ActivityLog() {
               {isAdmin ? 'ดูประวัติกิจกรรมทั้งหมดในระบบ' : 'ดูประวัติกิจกรรมของคุณ'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="ค้นหากิจกรรม..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 w-64"
-              />
-            </div>
-          </div>
         </div>
 
-        {/* Stats */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">ตัวกรอง</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="ค้นหากิจกรรม..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              <Select value={actionFilter} onValueChange={setActionFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="ประเภทกิจกรรม" />
+                </SelectTrigger>
+                <SelectContent>
+                  {actionTypes.map(type => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, 'dd/MM/yy', { locale: th }) : 'เริ่มต้น'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+                </PopoverContent>
+              </Popover>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, 'dd/MM/yy', { locale: th }) : 'สิ้นสุด'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+                </PopoverContent>
+              </Popover>
+
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="w-4 h-4 mr-1" />
+                  ล้างตัวกรอง
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardContent className="pt-6">
@@ -177,8 +281,8 @@ export default function ActivityLog() {
                   <Activity className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">{logs.length}</p>
-                  <p className="text-sm text-muted-foreground">กิจกรรมทั้งหมด</p>
+                  <p className="text-2xl font-bold text-foreground">{filteredLogs.length}</p>
+                  <p className="text-sm text-muted-foreground">กิจกรรมที่แสดง</p>
                 </div>
               </div>
             </CardContent>
@@ -191,7 +295,7 @@ export default function ActivityLog() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">
-                    {logs.filter(l => l.action === 'login').length}
+                    {filteredLogs.filter(l => l.action === 'login').length}
                   </p>
                   <p className="text-sm text-muted-foreground">การเข้าสู่ระบบ</p>
                 </div>
@@ -206,7 +310,7 @@ export default function ActivityLog() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">
-                    {logs.filter(l => l.action.startsWith('po_')).length}
+                    {filteredLogs.filter(l => l.action.startsWith('po_')).length}
                   </p>
                   <p className="text-sm text-muted-foreground">กิจกรรม PO</p>
                 </div>
@@ -215,11 +319,10 @@ export default function ActivityLog() {
           </Card>
         </div>
 
-        {/* Activity Table */}
         <Card>
           <CardHeader>
             <CardTitle>รายการกิจกรรม</CardTitle>
-            <CardDescription>แสดง 100 กิจกรรมล่าสุด</CardDescription>
+            <CardDescription>แสดง {filteredLogs.length} กิจกรรม</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>

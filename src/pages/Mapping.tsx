@@ -4,10 +4,12 @@ import { MappingTable } from '@/components/mapping/MappingTable';
 import { mockProductMappings } from '@/data/mockData';
 import { fetchProductMappings, createProductMapping, updateProductMapping, deleteProductMapping } from '@/lib/api/database';
 import { useToast } from '@/hooks/use-toast';
+import { useActivityLog } from '@/hooks/useActivityLog';
 import { ProductMapping } from '@/types/po';
 
 const Mapping = () => {
   const { toast } = useToast();
+  const { logActivity } = useActivityLog();
   const [mappings, setMappings] = useState<ProductMapping[]>(mockProductMappings);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +41,7 @@ const Mapping = () => {
 
   const handleAdd = async (mapping: Partial<ProductMapping>) => {
     try {
-      await createProductMapping({
+      const result = await createProductMapping({
         customer_code: mapping.customerCode || '',
         customer_desc: mapping.customerDesc || '',
         vendor_code: mapping.vendorCode || '',
@@ -47,6 +49,14 @@ const Mapping = () => {
         unit: mapping.unit || 'ลัง',
         active: mapping.active ?? true,
       });
+      
+      await logActivity({
+        action: 'mapping_created',
+        entity_type: 'mapping',
+        entity_id: result?.id,
+        details: { customer_code: mapping.customerCode, vendor_code: mapping.vendorCode }
+      });
+      
       toast({ title: 'เพิ่ม Mapping สำเร็จ' });
       loadMappings();
     } catch (error) {
@@ -64,6 +74,14 @@ const Mapping = () => {
         unit: mapping.unit,
         active: mapping.active,
       });
+      
+      await logActivity({
+        action: 'mapping_updated',
+        entity_type: 'mapping',
+        entity_id: id,
+        details: { customer_code: mapping.customerCode, vendor_code: mapping.vendorCode }
+      });
+      
       toast({ title: 'แก้ไข Mapping สำเร็จ' });
       loadMappings();
     } catch (error) {
@@ -73,7 +91,16 @@ const Mapping = () => {
 
   const handleDelete = async (id: string) => {
     try {
+      const mappingToDelete = mappings.find(m => m.id === id);
       await deleteProductMapping(id);
+      
+      await logActivity({
+        action: 'mapping_deleted',
+        entity_type: 'mapping',
+        entity_id: id,
+        details: { customer_code: mappingToDelete?.customerCode }
+      });
+      
       toast({ title: 'ลบ Mapping สำเร็จ' });
       loadMappings();
     } catch (error) {
