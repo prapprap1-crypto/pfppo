@@ -8,7 +8,8 @@ import {
   LogOut,
   FolderOpen,
   Users,
-  UserCircle
+  UserCircle,
+  Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +21,7 @@ const navItems = [
   { path: '/mapping', label: 'Mapping สินค้า', icon: Layers },
   { path: '/verification', label: 'ตรวจสอบเอกสาร', icon: FileCheck },
   { path: '/export', label: 'ส่งออก Excel', icon: Download },
+  { path: '/activity-log', label: 'ประวัติการใช้งาน', icon: Activity },
   { path: '/users', label: 'จัดการผู้ใช้', icon: Users },
   { path: '/profile', label: 'โปรไฟล์', icon: UserCircle },
 ];
