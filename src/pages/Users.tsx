@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useActivityLog } from '@/hooks/useActivityLog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { sendNotificationEmail } from '@/lib/api/notifications';
 import { 
   Table, 
   TableBody, 
@@ -60,6 +62,7 @@ interface UserWithRole {
 export default function Users() {
   const { user } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
+  const { logActivity } = useActivityLog();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithRole[]>([]);
@@ -70,7 +73,6 @@ export default function Users() {
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Redirect non-admin users
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
       toast({
@@ -92,7 +94,6 @@ export default function Users() {
     try {
       setLoading(true);
       
-      // Fetch profiles with roles using a join approach
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
@@ -105,7 +106,6 @@ export default function Users() {
 
       if (rolesError) throw rolesError;
 
-      // Combine profiles with roles
       const usersWithRoles: UserWithRole[] = (profiles || []).map(profile => {
         const userRole = roles?.find(r => r.user_id === profile.id);
         return {
@@ -131,8 +131,19 @@ export default function Users() {
     }
   };
 
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'admin': return 'ผู้ดูแลระบบ';
+      case 'moderator': return 'ผู้ควบคุม';
+      case 'user': return 'ผู้ใช้งาน';
+      default: return role;
+    }
+  };
+
   const handleRoleChange = async () => {
     if (!selectedUser || !newRole) return;
+
+    const oldRole = selectedUser.role;
 
     try {
       const { error } = await supabase
@@ -141,6 +152,29 @@ export default function Users() {
         .eq('user_id', selectedUser.id);
 
       if (error) throw error;
+
+      await logActivity({
+        action: 'role_changed',
+        entity_type: 'user',
+        entity_id: selectedUser.id,
+        details: { 
+          user_email: selectedUser.email,
+          old_role: oldRole, 
+          new_role: newRole 
+        }
+      });
+
+      if (selectedUser.email) {
+        await sendNotificationEmail({
+          to: selectedUser.email,
+          subject: 'บทบาทของคุณถูกเปลี่ยนแปลง',
+          type: 'role_changed',
+          data: {
+            userName: selectedUser.full_name || selectedUser.email,
+            newRole: getRoleLabel(newRole)
+          }
+        });
+      }
 
       toast({
         title: 'สำเร็จ',
@@ -156,15 +190,6 @@ export default function Users() {
         description: 'ไม่สามารถเปลี่ยนบทบาทได้',
         variant: 'destructive'
       });
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'admin': return 'ผู้ดูแลระบบ';
-      case 'moderator': return 'ผู้ควบคุม';
-      case 'user': return 'ผู้ใช้งาน';
-      default: return role;
     }
   };
 
@@ -199,7 +224,6 @@ export default function Users() {
     u.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Show loading or redirect if not admin
   if (roleLoading) {
     return (
       <MainLayout title="จัดการผู้ใช้งาน" subtitle="ดูและจัดการบัญชีผู้ใช้ทั้งหมดในระบบ">
@@ -228,7 +252,6 @@ export default function Users() {
   return (
     <MainLayout title="จัดการผู้ใช้งาน" subtitle="ดูและจัดการบัญชีผู้ใช้ทั้งหมดในระบบ">
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">จัดการผู้ใช้งาน</h1>
@@ -247,7 +270,6 @@ export default function Users() {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-card border border-border rounded-xl p-4">
             <div className="flex items-center gap-3">
@@ -288,7 +310,6 @@ export default function Users() {
           </div>
         </div>
 
-        {/* Users Table */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <Table>
             <TableHeader>
@@ -385,7 +406,6 @@ export default function Users() {
         </div>
       </div>
 
-      {/* Role Change Dialog */}
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -432,7 +452,6 @@ export default function Users() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete User Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -445,43 +464,11 @@ export default function Users() {
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               ยกเลิก
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={async () => {
-                if (!selectedUser) return;
-                
-                try {
-                  // Delete from user_roles first
-                  await supabase
-                    .from('user_roles')
-                    .delete()
-                    .eq('user_id', selectedUser.id);
-                  
-                  // Delete from profiles
-                  await supabase
-                    .from('profiles')
-                    .delete()
-                    .eq('id', selectedUser.id);
-
-                  toast({
-                    title: 'สำเร็จ',
-                    description: `ลบผู้ใช้ ${selectedUser.email} แล้ว`
-                  });
-
-                  setDeleteDialogOpen(false);
-                  fetchUsers();
-                } catch (error) {
-                  console.error('Error deleting user:', error);
-                  toast({
-                    title: 'เกิดข้อผิดพลาด',
-                    description: 'ไม่สามารถลบผู้ใช้ได้',
-                    variant: 'destructive'
-                  });
-                }
-              }}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              ลบผู้ใช้
+            <Button variant="destructive" onClick={() => {
+              toast({ title: 'ฟีเจอร์นี้ยังไม่พร้อมใช้งาน', variant: 'destructive' });
+              setDeleteDialogOpen(false);
+            }}>
+              ลบ
             </Button>
           </DialogFooter>
         </DialogContent>
