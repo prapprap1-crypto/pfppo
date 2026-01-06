@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { useActivityLog } from '@/hooks/useActivityLog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { sendNotificationEmail } from '@/lib/api/notifications';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +24,7 @@ import {
 export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { logActivity } = useActivityLog();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -207,6 +210,23 @@ export default function Profile() {
       });
 
       if (error) throw error;
+
+      // Log activity
+      await logActivity({
+        action: 'password_changed',
+        entity_type: 'user',
+        entity_id: user?.id
+      });
+
+      // Send notification email
+      if (email) {
+        sendNotificationEmail({
+          to: email,
+          subject: '🔐 รหัสผ่านของคุณถูกเปลี่ยนแปลง',
+          type: 'password_changed',
+          data: { userName: fullName || 'ผู้ใช้งาน' }
+        });
+      }
 
       toast({
         title: 'สำเร็จ',

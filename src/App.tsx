@@ -11,6 +11,7 @@ import Verification from "./pages/Verification";
 import Export from "./pages/Export";
 import Users from "./pages/Users";
 import Profile from "./pages/Profile";
+import ActivityLog from "./pages/ActivityLog";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -47,6 +48,7 @@ function AppRoutes() {
       <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
       <Route path="/verification/:id" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
       <Route path="/export" element={<ProtectedRoute><Export /></ProtectedRoute>} />
+      <Route path="/activity-log" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />

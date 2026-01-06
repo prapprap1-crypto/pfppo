@@ -1,0 +1,144 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+interface NotificationEmailRequest {
+  to: string;
+  subject: string;
+  type: 'password_changed' | 'login_alert' | 'role_changed' | 'custom';
+  data?: {
+    userName?: string;
+    newRole?: string;
+    message?: string;
+  };
+}
+
+const getEmailTemplate = (type: string, data: any): string => {
+  const userName = data?.userName || 'ผู้ใช้งาน';
+  
+  switch (type) {
+    case 'password_changed':
+      return `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">🔐 การแจ้งเตือนความปลอดภัย</h1>
+          </div>
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <h2 style="color: #1f2937; margin-top: 0;">สวัสดี ${userName}</h2>
+            <p style="color: #4b5563; line-height: 1.6;">รหัสผ่านของบัญชีคุณได้ถูกเปลี่ยนแปลงเรียบร้อยแล้ว</p>
+            <p style="color: #4b5563; line-height: 1.6;">หากคุณไม่ได้เป็นผู้ดำเนินการนี้ กรุณาติดต่อผู้ดูแลระบบทันที</p>
+            <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-top: 20px;">
+              <p style="color: #92400e; margin: 0; font-size: 14px;">⚠️ หากคุณไม่ได้ทำการเปลี่ยนแปลงนี้ กรุณาติดต่อเราทันที</p>
+            </div>
+          </div>
+        </div>
+      `;
+    
+    case 'login_alert':
+      return `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">🔑 การเข้าสู่ระบบใหม่</h1>
+          </div>
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <h2 style="color: #1f2937; margin-top: 0;">สวัสดี ${userName}</h2>
+            <p style="color: #4b5563; line-height: 1.6;">มีการเข้าสู่ระบบใหม่ในบัญชีของคุณ</p>
+            <p style="color: #4b5563; line-height: 1.6;">หากเป็นการเข้าสู่ระบบของคุณเอง คุณสามารถเพิกเฉยข้อความนี้ได้</p>
+          </div>
+        </div>
+      `;
+    
+    case 'role_changed':
+      return `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">👤 การเปลี่ยนแปลงบทบาท</h1>
+          </div>
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <h2 style="color: #1f2937; margin-top: 0;">สวัสดี ${userName}</h2>
+            <p style="color: #4b5563; line-height: 1.6;">บทบาทของบัญชีคุณได้ถูกเปลี่ยนแปลงเป็น: <strong>${data?.newRole || 'ไม่ระบุ'}</strong></p>
+            <p style="color: #4b5563; line-height: 1.6;">หากคุณมีคำถามเกี่ยวกับสิทธิ์ใหม่ กรุณาติดต่อผู้ดูแลระบบ</p>
+          </div>
+        </div>
+      `;
+    
+    default:
+      return `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">📧 การแจ้งเตือน</h1>
+          </div>
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <h2 style="color: #1f2937; margin-top: 0;">สวัสดี ${userName}</h2>
+            <p style="color: #4b5563; line-height: 1.6;">${data?.message || 'คุณมีการแจ้งเตือนใหม่'}</p>
+          </div>
+        </div>
+      `;
+  }
+};
+
+const handler = async (req: Request): Promise<Response> => {
+  console.log("Received notification email request");
+  
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { to, subject, type, data }: NotificationEmailRequest = await req.json();
+    
+    console.log(`Sending ${type} email to: ${to}`);
+
+    const html = getEmailTemplate(type, data);
+
+    // Send email using Resend API
+    const emailResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: "PO System <onboarding@resend.dev>",
+        to: [to],
+        subject: subject,
+        html: html,
+      }),
+    });
+
+    const responseData = await emailResponse.json();
+
+    if (!emailResponse.ok) {
+      console.error("Error from Resend API:", responseData);
+      throw new Error(responseData.message || "Failed to send email");
+    }
+
+    console.log("Email sent successfully:", responseData);
+
+    return new Response(JSON.stringify(responseData), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error in send-notification-email function:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
+  }
+};
+
+serve(handler);
