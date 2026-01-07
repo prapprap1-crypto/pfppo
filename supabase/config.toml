@@ -1,4 +1,7 @@
 project_id = "fptzergjsjgjuzhfxknd"
 
 [functions.parse-po-pdf]
-verify_jwt = true
+verify_jwt = false
+
+[functions.send-notification-email]
+verify_jwt = false
