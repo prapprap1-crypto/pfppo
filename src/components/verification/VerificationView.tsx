@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { POHeader, POItem, STATUS_LABELS, STATUS_CLASSES } from '@/types/po';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +38,32 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   const [zoom, setZoom] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
   const [editedItems, setEditedItems] = useState<Record<string, Partial<POItem>>>({});
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  // Load PDF URL from storage
+  useEffect(() => {
+    const loadPdfUrl = async () => {
+      if (!po.sourceFile) return;
+      
+      setPdfLoading(true);
+      try {
+        const { data } = await supabase.storage
+          .from('po-files')
+          .createSignedUrl(po.sourceFile, 3600); // 1 hour expiry
+        
+        if (data?.signedUrl) {
+          setPdfUrl(data.signedUrl);
+        }
+      } catch (error) {
+        console.error('Error loading PDF:', error);
+      } finally {
+        setPdfLoading(false);
+      }
+    };
+
+    loadPdfUrl();
+  }, [po.sourceFile]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('th-TH', {
@@ -169,61 +196,27 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
             </div>
           </div>
           <div 
-            className="flex-1 bg-muted/20 p-4 overflow-auto flex items-center justify-center"
+            className="flex-1 bg-muted/20 overflow-auto flex items-center justify-center"
             style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'center top' }}
           >
-            {/* Placeholder for PDF viewer */}
-            <div className="bg-card border rounded-lg shadow-lg p-8 w-[600px] min-h-[800px]">
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-bold">บริษัท บีเอ็นเอ็น เรสเตอร์รองท์ กรุ๊ป จำกัด</h3>
-                <p className="text-sm text-muted-foreground">34/4 ซอยประดิษฐ์มนูธรรม 19</p>
+            {pdfLoading ? (
+              <div className="flex flex-col items-center justify-center gap-2 p-8">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-muted-foreground text-sm">กำลังโหลด PDF...</p>
               </div>
-              <div className="border-t border-b py-4 my-4">
-                <h4 className="text-xl font-bold text-center">ใบสั่งซื้อสินค้า (Purchase Order)</h4>
+            ) : pdfUrl ? (
+              <iframe
+                src={`${pdfUrl}#toolbar=1&navpanes=0&scrollbar=1`}
+                className="w-full h-full min-h-[800px] border-0"
+                title={`PDF Preview - ${po.poNumber}`}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 p-8 text-muted-foreground">
+                <AlertTriangle className="w-12 h-12 text-warning" />
+                <p className="text-sm">ไม่พบไฟล์ PDF สำหรับ PO นี้</p>
+                <p className="text-xs">กรุณาอัปโหลดไฟล์ใหม่อีกครั้ง</p>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-sm mb-6">
-                <div>
-                  <p><strong>ผู้จำหน่าย:</strong> {po.supplierCode}</p>
-                  <p>{po.supplierName}</p>
-                </div>
-                <div className="text-right">
-                  <p><strong>เลขที่เอกสาร:</strong> {po.poNumber}</p>
-                  <p><strong>วันที่เอกสาร:</strong> {new Date(po.documentDate).toLocaleDateString('th-TH')}</p>
-                </div>
-              </div>
-              <table className="w-full text-xs border">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="border p-1">No.</th>
-                    <th className="border p-1">Product Code</th>
-                    <th className="border p-1">Description</th>
-                    <th className="border p-1">Qty</th>
-                    <th className="border p-1">Unit Price</th>
-                    <th className="border p-1">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item, idx) => (
-                    <tr 
-                      key={item.id}
-                      className={cn(
-                        'cursor-pointer transition-colors',
-                        selectedItemId === item.id && 'bg-accent/20',
-                        !item.isMapped && 'bg-warning/10'
-                      )}
-                      onClick={() => setSelectedItemId(item.id)}
-                    >
-                      <td className="border p-1 text-center">{idx + 1}</td>
-                      <td className="border p-1">{item.customerProductCode}</td>
-                      <td className="border p-1">{item.customerDescription}</td>
-                      <td className="border p-1 text-center">{item.quantity}</td>
-                      <td className="border p-1 text-right">{formatCurrency(item.unitPrice)}</td>
-                      <td className="border p-1 text-right">{formatCurrency(item.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            )}
           </div>
         </div>
 
