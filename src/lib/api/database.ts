@@ -22,6 +22,18 @@ export async function fetchPOHeaderById(id: string) {
   return data;
 }
 
+// Check if PO number already exists
+export async function checkDuplicatePO(poNumber: string): Promise<{ exists: boolean; existingPO?: any }> {
+  const { data, error } = await supabase
+    .from('po_headers')
+    .select('id, po_number, branch, document_date, created_at')
+    .eq('po_number', poNumber)
+    .maybeSingle();
+  
+  if (error) throw error;
+  return { exists: !!data, existingPO: data };
+}
+
 export async function createPOHeader(poHeader: {
   po_number: string;
   supplier_code: string;
@@ -38,6 +50,12 @@ export async function createPOHeader(poHeader: {
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
+
+  // Check for duplicate PO
+  const { exists, existingPO } = await checkDuplicatePO(poHeader.po_number);
+  if (exists) {
+    throw new Error(`PO ${poHeader.po_number} มีอยู่แล้วในระบบ (นำเข้าเมื่อ ${new Date(existingPO.created_at).toLocaleDateString('th-TH')})`);
+  }
 
   const { data, error } = await supabase
     .from('po_headers')
