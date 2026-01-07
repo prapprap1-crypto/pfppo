@@ -1,11 +1,19 @@
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileText, X, Loader2, CheckCircle, AlertCircle, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { createPOHeader, createPOItems } from '@/lib/api/database';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 
 interface FileUploadZoneProps {
   onFilesSelected?: (files: File[]) => void;
@@ -16,12 +24,51 @@ interface FileUploadZoneProps {
 }
 
 type FileStatus = 'pending' | 'processing' | 'success' | 'error';
+type ProcessingStep = 'converting' | 'parsing' | 'saving' | 'done';
+
+interface ExtractedPOData {
+  po_number: string;
+  supplier_code: string;
+  supplier_name: string;
+  branch: string;
+  document_date: string;
+  due_date: string;
+  net_total: number;
+  vat: number;
+  grand_total: number;
+  items: Array<{
+    customer_product_code: string;
+    customer_description: string;
+    quantity: number;
+    unit: string;
+    unit_price: number;
+    amount: number;
+    delivery_date: string;
+  }>;
+}
 
 interface UploadedFile {
   file: File;
   status: FileStatus;
   error?: string;
+  step?: ProcessingStep;
+  progress?: number;
+  extractedData?: ExtractedPOData;
 }
+
+const STEP_LABELS: Record<ProcessingStep, string> = {
+  converting: 'กำลังแปลงไฟล์...',
+  parsing: 'กำลังวิเคราะห์ด้วย AI...',
+  saving: 'กำลังบันทึกข้อมูล...',
+  done: 'เสร็จสิ้น'
+};
+
+const STEP_PROGRESS: Record<ProcessingStep, number> = {
+  converting: 20,
+  parsing: 60,
+  saving: 90,
+  done: 100
+};
 
 export function FileUploadZone({ 
   onFilesSelected, 
@@ -33,12 +80,14 @@ export function FileUploadZone({
   const { toast } = useToast();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedPreview, setSelectedPreview] = useState<ExtractedPOData | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       const newFiles = acceptedFiles.map(file => ({
         file,
-        status: 'pending' as FileStatus
+        status: 'pending' as FileStatus,
+        progress: 0
       }));
       setUploadedFiles(prev => [...prev, ...newFiles]);
       toast({
@@ -65,12 +114,17 @@ export function FileUploadZone({
       reader.readAsDataURL(file);
       reader.onload = () => {
         const result = reader.result as string;
-        // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
         const base64 = result.split(',')[1];
         resolve(base64);
       };
       reader.onerror = error => reject(error);
     });
+  };
+
+  const updateFileState = (index: number, updates: Partial<UploadedFile>) => {
+    setUploadedFiles(prev => 
+      prev.map((f, idx) => idx === index ? { ...f, ...updates } : f)
+    );
   };
 
   const processFiles = async () => {
@@ -85,14 +139,22 @@ export function FileUploadZone({
       
       if (status !== 'pending') continue;
 
-      // Update status to processing
-      setUploadedFiles(prev => 
-        prev.map((f, idx) => idx === i ? { ...f, status: 'processing' as FileStatus } : f)
-      );
+      // Step 1: Converting
+      updateFileState(i, { 
+        status: 'processing', 
+        step: 'converting', 
+        progress: STEP_PROGRESS.converting 
+      });
 
       try {
         // Convert PDF to base64
         const pdfBase64 = await fileToBase64(file);
+
+        // Step 2: Parsing with AI
+        updateFileState(i, { 
+          step: 'parsing', 
+          progress: STEP_PROGRESS.parsing 
+        });
 
         // Call edge function to parse PDF
         const { data, error } = await supabase.functions.invoke('parse-po-pdf', {
@@ -102,8 +164,15 @@ export function FileUploadZone({
         if (error) throw error;
         if (!data.success) throw new Error(data.error || 'Failed to parse PDF');
 
-        const extractedData = data.data;
+        const extractedData = data.data as ExtractedPOData;
         console.log('Extracted PO data:', extractedData);
+
+        // Step 3: Saving to database
+        updateFileState(i, { 
+          step: 'saving', 
+          progress: STEP_PROGRESS.saving,
+          extractedData 
+        });
 
         // Save to database
         const poHeader = await createPOHeader({
@@ -121,7 +190,7 @@ export function FileUploadZone({
         });
 
         if (poHeader && extractedData.items?.length > 0) {
-          const items = extractedData.items.map((item: any) => ({
+          const items = extractedData.items.map((item) => ({
             po_id: poHeader.id,
             customer_product_code: item.customer_product_code,
             customer_description: item.customer_description,
@@ -136,17 +205,22 @@ export function FileUploadZone({
           await createPOItems(items);
         }
 
-        setUploadedFiles(prev => 
-          prev.map((f, idx) => idx === i ? { ...f, status: 'success' as FileStatus } : f)
-        );
+        // Step 4: Done
+        updateFileState(i, { 
+          status: 'success', 
+          step: 'done', 
+          progress: STEP_PROGRESS.done 
+        });
         successCount++;
 
       } catch (error) {
         console.error('Error processing file:', file.name, error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        setUploadedFiles(prev => 
-          prev.map((f, idx) => idx === i ? { ...f, status: 'error' as FileStatus, error: errorMessage } : f)
-        );
+        updateFileState(i, { 
+          status: 'error', 
+          error: errorMessage,
+          progress: 0 
+        });
         errorCount++;
       }
     }
@@ -182,6 +256,10 @@ export function FileUploadZone({
   };
 
   const pendingCount = uploadedFiles.filter(f => f.status === 'pending').length;
+  const processingFile = uploadedFiles.find(f => f.status === 'processing');
+  const totalProgress = uploadedFiles.length > 0 
+    ? uploadedFiles.reduce((acc, f) => acc + (f.progress || 0), 0) / uploadedFiles.length 
+    : 0;
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -216,39 +294,103 @@ export function FileUploadZone({
         </div>
       </div>
 
+      {/* Overall Progress */}
+      {isProcessing && (
+        <div className="bg-card rounded-xl border p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">ความคืบหน้าโดยรวม</span>
+            <span className="text-sm text-muted-foreground">{Math.round(totalProgress)}%</span>
+          </div>
+          <Progress value={totalProgress} className="h-2" />
+          {processingFile && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>{processingFile.step ? STEP_LABELS[processingFile.step] : 'กำลังประมวลผล...'}</span>
+              <span className="text-foreground font-medium">{processingFile.file.name}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {uploadedFiles.length > 0 && (
         <div className="bg-card rounded-xl border p-4">
           <h4 className="text-sm font-medium mb-3">ไฟล์ที่เลือก ({uploadedFiles.length})</h4>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {uploadedFiles.map((uploadedFile, index) => (
               <div 
                 key={`${uploadedFile.file.name}-${index}`}
                 className={cn(
-                  "flex items-center justify-between p-2 rounded-lg",
+                  "p-3 rounded-lg transition-all",
                   uploadedFile.status === 'error' ? 'bg-destructive/10' :
                   uploadedFile.status === 'success' ? 'bg-green-500/10' :
+                  uploadedFile.status === 'processing' ? 'bg-primary/5 border border-primary/20' :
                   'bg-muted/50'
                 )}
               >
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  {getStatusIcon(uploadedFile.status)}
-                  <span className="text-sm font-medium truncate max-w-48">{uploadedFile.file.name}</span>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    ({(uploadedFile.file.size / 1024).toFixed(1)} KB)
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {getStatusIcon(uploadedFile.status)}
+                    <span className="text-sm font-medium truncate max-w-48">{uploadedFile.file.name}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      ({(uploadedFile.file.size / 1024).toFixed(1)} KB)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {uploadedFile.status === 'success' && uploadedFile.extractedData && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 text-xs"
+                        onClick={() => setSelectedPreview(uploadedFile.extractedData!)}
+                      >
+                        <Eye className="w-3 h-3 mr-1" />
+                        ดูผลลัพธ์
+                      </Button>
+                    )}
+                    {uploadedFile.status === 'pending' && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 shrink-0"
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                {uploadedFile.status === 'pending' && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6 shrink-0"
-                    onClick={() => removeFile(index)}
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
+
+                {/* Individual Progress Bar */}
+                {uploadedFile.status === 'processing' && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">
+                        {uploadedFile.step ? STEP_LABELS[uploadedFile.step] : 'กำลังประมวลผล...'}
+                      </span>
+                      <span className="font-medium">{uploadedFile.progress || 0}%</span>
+                    </div>
+                    <Progress value={uploadedFile.progress || 0} className="h-1.5" />
+                  </div>
                 )}
+
+                {/* Success Summary */}
+                {uploadedFile.status === 'success' && uploadedFile.extractedData && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      PO: {uploadedFile.extractedData.po_number}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {uploadedFile.extractedData.items?.length || 0} รายการ
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      ฿{uploadedFile.extractedData.grand_total?.toLocaleString() || 0}
+                    </Badge>
+                  </div>
+                )}
+
+                {/* Error Message */}
                 {uploadedFile.status === 'error' && uploadedFile.error && (
-                  <span className="text-xs text-destructive truncate max-w-32">{uploadedFile.error}</span>
+                  <p className="mt-2 text-xs text-destructive">{uploadedFile.error}</p>
                 )}
               </div>
             ))}
@@ -274,6 +416,89 @@ export function FileUploadZone({
           )}
         </div>
       )}
+
+      {/* Preview Dialog */}
+      <Dialog open={!!selectedPreview} onOpenChange={() => setSelectedPreview(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>ผลการวิเคราะห์ PO</DialogTitle>
+          </DialogHeader>
+          {selectedPreview && (
+            <div className="space-y-4">
+              {/* Header Info */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">เลข PO:</span>
+                    <span className="font-medium">{selectedPreview.po_number}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">รหัสผู้จำหน่าย:</span>
+                    <span className="font-medium">{selectedPreview.supplier_code}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">ผู้จำหน่าย:</span>
+                    <span className="font-medium truncate max-w-32">{selectedPreview.supplier_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">สาขา:</span>
+                    <span className="font-medium truncate max-w-32">{selectedPreview.branch}</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">วันที่เอกสาร:</span>
+                    <span className="font-medium">{selectedPreview.document_date}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">วันครบกำหนด:</span>
+                    <span className="font-medium">{selectedPreview.due_date}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">ยอดสุทธิ:</span>
+                    <span className="font-medium">฿{selectedPreview.net_total?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">VAT:</span>
+                    <span className="font-medium">฿{selectedPreview.vat?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">ยอดรวม:</span>
+                    <span className="font-bold text-primary">฿{selectedPreview.grand_total?.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              {selectedPreview.items && selectedPreview.items.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-muted px-3 py-2 text-sm font-medium">
+                    รายการสินค้า ({selectedPreview.items.length} รายการ)
+                  </div>
+                  <div className="divide-y max-h-64 overflow-y-auto">
+                    {selectedPreview.items.map((item, idx) => (
+                      <div key={idx} className="px-3 py-2 text-sm">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-medium">{item.customer_product_code}</p>
+                            <p className="text-muted-foreground text-xs">{item.customer_description}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">฿{item.amount?.toLocaleString()}</p>
+                            <p className="text-muted-foreground text-xs">
+                              {item.quantity} {item.unit} × ฿{item.unit_price?.toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
