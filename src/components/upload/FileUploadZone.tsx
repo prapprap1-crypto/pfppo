@@ -167,12 +167,27 @@ export function FileUploadZone({
         const extractedData = data.data as ExtractedPOData;
         console.log('Extracted PO data:', extractedData);
 
-        // Step 3: Saving to database
+        // Step 3: Saving to database and uploading PDF
         updateFileState(i, { 
           step: 'saving', 
           progress: STEP_PROGRESS.saving,
           extractedData 
         });
+
+        // Get current user for folder path
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        // Upload PDF to storage bucket
+        const filePath = `${user.id}/${Date.now()}_${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('po-files')
+          .upload(filePath, file, { contentType: 'application/pdf' });
+
+        if (uploadError) {
+          console.error('Storage upload error:', uploadError);
+          // Continue even if storage upload fails
+        }
 
         // Save to database
         const poHeader = await createPOHeader({
@@ -185,7 +200,7 @@ export function FileUploadZone({
           net_total: extractedData.net_total,
           vat: extractedData.vat,
           grand_total: extractedData.grand_total,
-          source_file: file.name,
+          source_file: uploadError ? null : filePath,
           status: 'NEW'
         });
 
