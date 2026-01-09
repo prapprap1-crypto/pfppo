@@ -130,22 +130,34 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
             )}
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-4 gap-4 text-sm">
+        <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-sm">
           <div>
             <span className="text-muted-foreground">สาขา:</span>
-            <p className="font-medium">{po.branch}</p>
+            <p className="font-medium">{po.branch || '-'}</p>
           </div>
           <div>
             <span className="text-muted-foreground">วันครบกำหนด:</span>
             <p className="font-medium">{new Date(po.dueDate).toLocaleDateString('th-TH')}</p>
           </div>
           <div>
-            <span className="text-muted-foreground">มูลค่ารวม:</span>
-            <p className="font-bold text-lg">฿{formatCurrency(po.grandTotal)}</p>
+            <span className="text-muted-foreground">รวมมูลค่า:</span>
+            <p className="font-medium">฿{formatCurrency(po.netTotal)}</p>
           </div>
-          <div className="text-right">
-            <span className="text-muted-foreground">VAT 7%:</span>
+          <div>
+            <span className="text-muted-foreground">ส่วนลด:</span>
+            <p className="font-medium">-</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">มูลค่าหลังหักส่วนลด:</span>
+            <p className="font-medium">฿{formatCurrency(po.netTotal)}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">ภาษีมูลค่าเพิ่ม 7%:</span>
             <p className="font-medium">฿{formatCurrency(po.vat)}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">มูลค่าสุทธิ:</span>
+            <p className="font-bold text-lg text-primary">฿{formatCurrency(po.grandTotal)}</p>
           </div>
         </div>
       </div>
