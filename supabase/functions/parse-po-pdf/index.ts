@@ -40,7 +40,7 @@ serve(async (req) => {
     // Use Gemini Vision to extract structured data from PDF
     const systemPrompt = `You are a Thai PO (Purchase Order) document analyzer. Extract structured data from the provided PDF image.
 
-IMPORTANT: The document is in Thai. Extract all data accurately.
+IMPORTANT: The document is in Thai. Extract all data accurately FROM THE DOCUMENT. DO NOT CALCULATE ANY VALUES.
 
 Return a JSON object with this EXACT structure:
 {
@@ -50,9 +50,9 @@ Return a JSON object with this EXACT structure:
   "branch": "ตะวันนา 2 บางกะปิ",
   "document_date": "2025-12-26",
   "due_date": "2026-01-08",
-  "net_total": 42000.01,
-  "vat": 2940.00,
-  "grand_total": 44940.01,
+  "net_total": 17915.89,
+  "vat": 1254.11,
+  "grand_total": 19170.01,
   "items": [
     {
       "customer_product_code": "FG-FZ-0001",
@@ -66,14 +66,20 @@ Return a JSON object with this EXACT structure:
   ]
 }
 
-Rules:
+CRITICAL RULES for extracting totals:
+- Look at the summary box on the bottom right of the document
+- "รวมมูลค่า" (Gross Total) = net_total (value BEFORE VAT)
+- "ภาษีมูลค่าเพิ่ม 7%" (Vat Total) = vat
+- "มูลค่าสุทธิ" (Net Total) = grand_total (final total AFTER VAT)
+- Extract these values EXACTLY as shown in the document. DO NOT calculate or recalculate any values.
+
+Other rules:
 - Extract dates in YYYY-MM-DD format
 - Extract numbers without currency symbols or commas
 - Extract ALL item rows from the table
 - If a field is not found, use null
 - Always return valid JSON
-- For "branch": Look at "สถานที่จัดส่ง" (Delivery Location) field. Remove the word "สาขา" from the beginning if present. For example: "สาขา สาขา ตะวันนา 2 บางกะปิ" should become "ตะวันนา 2 บางกะปิ"
-- grand_total MUST be the sum of net_total + vat`;
+- For "branch": Look at "สถานที่จัดส่ง" (Delivery Location) field. Remove the word "สาขา" from the beginning if present. For example: "สาขา สาขา ตะวันนา 2 บางกะปิ" should become "ตะวันนา 2 บางกะปิ"`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
