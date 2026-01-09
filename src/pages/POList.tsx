@@ -70,7 +70,7 @@ const POList = () => {
           </div>
         )}
 
-        <POTable poList={poHeaders} />
+        <POTable poList={poHeaders} onRefresh={loadData} />
       </div>
     </MainLayout>
   );
