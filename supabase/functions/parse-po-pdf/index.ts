@@ -47,7 +47,7 @@ Return a JSON object with this EXACT structure:
   "po_number": "POB825124790",
   "supplier_code": "VLT-P0010",
   "supplier_name": "บริษัท พี.เอฟ.พี เทรดดิ้ง จำกัด",
-  "branch": "สาขา บิ๊กซี เพลส ฉะเชิงเทรา",
+  "branch": "ตะวันนา 2 บางกะปิ",
   "document_date": "2025-12-26",
   "due_date": "2026-01-08",
   "net_total": 42000.01,
@@ -71,7 +71,9 @@ Rules:
 - Extract numbers without currency symbols or commas
 - Extract ALL item rows from the table
 - If a field is not found, use null
-- Always return valid JSON`;
+- Always return valid JSON
+- For "branch": Look at "สถานที่จัดส่ง" (Delivery Location) field. Remove the word "สาขา" from the beginning if present. For example: "สาขา สาขา ตะวันนา 2 บางกะปิ" should become "ตะวันนา 2 บางกะปิ"
+- grand_total MUST be the sum of net_total + vat`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

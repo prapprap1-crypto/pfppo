@@ -17,15 +17,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Eye, FileCheck, Download, Search, Filter } from 'lucide-react';
+import { Eye, FileCheck, Download, Search, Filter, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 
 interface POTableProps {
   poList: POHeader[];
+  onRefresh?: () => void;
 }
 
-export function POTable({ poList }: POTableProps) {
+export function POTable({ poList, onRefresh }: POTableProps) {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -52,6 +67,37 @@ export function POTable({ poList }: POTableProps) {
     return new Intl.NumberFormat('th-TH', {
       minimumFractionDigits: 2,
     }).format(amount);
+  };
+
+  const handleDelete = async (po: POHeader) => {
+    try {
+      // Delete PO items first (cascade)
+      await supabase.from('po_items').delete().eq('po_id', po.id);
+      
+      // Delete PO header
+      const { error } = await supabase.from('po_headers').delete().eq('id', po.id);
+      
+      if (error) throw error;
+
+      // Delete PDF file from storage if exists
+      if (po.sourceFile) {
+        await supabase.storage.from('po-files').remove([po.sourceFile]);
+      }
+
+      toast({
+        title: "ลบสำเร็จ",
+        description: `ลบ PO ${po.poNumber} เรียบร้อยแล้ว`,
+      });
+      
+      onRefresh?.();
+    } catch (error) {
+      console.error('Error deleting PO:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถลบ PO ได้",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -147,6 +193,30 @@ export function POTable({ poList }: POTableProps) {
                         <Download className="w-4 h-4 text-success" />
                       </Button>
                     )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            คุณต้องการลบ PO {po.poNumber} ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleDelete(po)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            ลบ
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </TableCell>
               </TableRow>
