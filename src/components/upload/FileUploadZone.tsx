@@ -178,8 +178,9 @@ export function FileUploadZone({
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        // Upload PDF to storage bucket
-        const filePath = `${user.id}/${Date.now()}_${file.name}`;
+        // Upload PDF to storage bucket - use only ASCII characters for filename
+        const safeFileName = `${extractedData.po_number}_${Date.now()}.pdf`;
+        const filePath = `${user.id}/${safeFileName}`;
         const { error: uploadError } = await supabase.storage
           .from('po-files')
           .upload(filePath, file, { contentType: 'application/pdf' });
