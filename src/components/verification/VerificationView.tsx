@@ -53,7 +53,12 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
           .createSignedUrl(po.sourceFile, 3600); // 1 hour expiry
         
         if (data?.signedUrl) {
-          setPdfUrl(data.signedUrl);
+          // The signedUrl from Supabase is relative, need to prepend the storage URL
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const fullUrl = data.signedUrl.startsWith('http') 
+            ? data.signedUrl 
+            : `${supabaseUrl}/storage/v1${data.signedUrl}`;
+          setPdfUrl(fullUrl);
         }
       } catch (error) {
         console.error('Error loading PDF:', error);
