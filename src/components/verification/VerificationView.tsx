@@ -215,33 +215,43 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
               </div>
             </div>
           </div>
-          <div 
-            className="flex-1 bg-muted/20 overflow-auto flex items-center justify-center"
-            style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'center top' }}
-          >
+          <div className="flex-1 bg-muted/20 overflow-auto flex items-center justify-center p-4">
             {pdfLoading ? (
               <div className="flex flex-col items-center justify-center gap-2 p-8">
                 <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                 <p className="text-muted-foreground text-sm">กำลังโหลด PDF...</p>
               </div>
             ) : pdfUrl ? (
-              <object
-                data={pdfUrl}
-                type="application/pdf"
-                className="w-full h-full min-h-[800px]"
-              >
-                <div className="flex flex-col items-center justify-center gap-4 p-8">
-                  <p className="text-muted-foreground">ไม่สามารถแสดง PDF ในเบราว์เซอร์ได้</p>
-                  <a 
-                    href={pdfUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    คลิกที่นี่เพื่อเปิด PDF ในแท็บใหม่
-                  </a>
+              <div className="flex flex-col items-center justify-center gap-4 p-8 w-full h-full">
+                <div className="bg-card border rounded-lg p-6 text-center max-w-md">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+                    <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-semibold text-lg mb-2">{po.poNumber}.pdf</h3>
+                  <p className="text-muted-foreground text-sm mb-4">เอกสาร PO ต้นฉบับ</p>
+                  <div className="flex flex-col gap-2">
+                    <a 
+                      href={pdfUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
+                    >
+                      <ZoomIn className="w-4 h-4" />
+                      เปิดดู PDF
+                    </a>
+                    <a 
+                      href={pdfUrl} 
+                      download={`${po.poNumber}.pdf`}
+                      className="inline-flex items-center justify-center gap-2 border border-input px-4 py-2 rounded-md hover:bg-accent transition-colors"
+                    >
+                      <Save className="w-4 h-4" />
+                      ดาวน์โหลด PDF
+                    </a>
+                  </div>
                 </div>
-              </object>
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center gap-2 p-8 text-muted-foreground">
                 <AlertTriangle className="w-12 h-12 text-warning" />
