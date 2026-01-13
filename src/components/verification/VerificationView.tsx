@@ -53,11 +53,14 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
           .createSignedUrl(po.sourceFile, 3600); // 1 hour expiry
         
         if (data?.signedUrl) {
-          // The signedUrl from Supabase is relative, need to prepend the storage URL
+          // Get public URL for the file with the signed token
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          // signedUrl format: /object/sign/bucket/path?token=xxx
+          // Need to build: https://xxx.supabase.co/storage/v1/object/sign/bucket/path?token=xxx
           const fullUrl = data.signedUrl.startsWith('http') 
             ? data.signedUrl 
             : `${supabaseUrl}/storage/v1${data.signedUrl}`;
+          console.log('PDF URL:', fullUrl);
           setPdfUrl(fullUrl);
         }
       } catch (error) {
