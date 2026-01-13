@@ -225,11 +225,23 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                 <p className="text-muted-foreground text-sm">กำลังโหลด PDF...</p>
               </div>
             ) : pdfUrl ? (
-              <iframe
-                src={`${pdfUrl}#toolbar=1&navpanes=0&scrollbar=1`}
-                className="w-full h-full min-h-[800px] border-0"
-                title={`PDF Preview - ${po.poNumber}`}
-              />
+              <object
+                data={pdfUrl}
+                type="application/pdf"
+                className="w-full h-full min-h-[800px]"
+              >
+                <div className="flex flex-col items-center justify-center gap-4 p-8">
+                  <p className="text-muted-foreground">ไม่สามารถแสดง PDF ในเบราว์เซอร์ได้</p>
+                  <a 
+                    href={pdfUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    คลิกที่นี่เพื่อเปิด PDF ในแท็บใหม่
+                  </a>
+                </div>
+              </object>
             ) : (
               <div className="flex flex-col items-center justify-center gap-2 p-8 text-muted-foreground">
                 <AlertTriangle className="w-12 h-12 text-warning" />
