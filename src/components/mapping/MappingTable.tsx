@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ProductMapping } from '@/types/po';
 import { 
   Table, 
@@ -18,18 +18,35 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Search, Plus, Pencil, Trash2, Upload } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Search, Plus, Pencil, Trash2, Upload, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { parseExcelForMappings } from '@/lib/utils/excel';
+import { useToast } from '@/hooks/use-toast';
 
 interface MappingTableProps {
   mappings: ProductMapping[];
   onAdd?: (mapping: Partial<ProductMapping>) => void;
   onEdit?: (id: string, mapping: Partial<ProductMapping>) => void;
   onDelete?: (id: string) => void;
+  onBulkImport?: (mappings: Partial<ProductMapping>[]) => Promise<void>;
 }
 
-export function MappingTable({ mappings, onAdd, onEdit, onDelete }: MappingTableProps) {
+export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }: MappingTableProps) {
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ProductMapping | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -74,6 +91,50 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete }: MappingTable
     setIsAddOpen(true);
   };
 
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsImporting(true);
+      const importedData = await parseExcelForMappings(file);
+      
+      if (importedData.length === 0) {
+        toast({ title: 'ไม่พบข้อมูลที่สามารถนำเข้าได้', variant: 'destructive' });
+        return;
+      }
+
+      const mappingsToImport: Partial<ProductMapping>[] = importedData.map(item => ({
+        customerCode: item.customer_code,
+        customerDesc: item.customer_desc || '',
+        vendorCode: item.vendor_code,
+        vendorDesc: item.vendor_desc || '',
+        unit: item.unit || 'ลัง',
+        active: true,
+      }));
+
+      if (onBulkImport) {
+        await onBulkImport(mappingsToImport);
+        toast({ title: `นำเข้าข้อมูลสำเร็จ ${mappingsToImport.length} รายการ` });
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({ title: 'เกิดข้อผิดพลาดในการนำเข้าไฟล์', variant: 'destructive' });
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const confirmDelete = () => {
+    if (deleteTarget) {
+      onDelete?.(deleteTarget.id);
+      setDeleteTarget(null);
+    }
+  };
+
   return (
     <div className="bg-card rounded-xl border">
       {/* Header */}
@@ -88,9 +149,25 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete }: MappingTable
           />
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Upload className="w-4 h-4 mr-2" />
-            นำเข้า Excel
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".xlsx,.xls"
+            onChange={handleFileImport}
+            className="hidden"
+          />
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+          >
+            {isImporting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4 mr-2" />
+            )}
+            {isImporting ? 'กำลังนำเข้า...' : 'นำเข้า Excel'}
           </Button>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
@@ -212,11 +289,30 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete }: MappingTable
                     <Button 
                       variant="ghost" 
                       size="icon"
-                      onClick={() => onDelete?.(mapping.id)}
+                      onClick={() => setDeleteTarget(mapping)}
                     >
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการลบ Mapping</AlertDialogTitle>
+            <AlertDialogDescription>
+              คุณต้องการลบ Mapping "{deleteTarget?.customerCode}" → "{deleteTarget?.vendorCode}" ใช่หรือไม่? 
+              การดำเนินการนี้ไม่สามารถย้อนกลับได้
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              ลบ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
                 </TableCell>
               </TableRow>
             ))}

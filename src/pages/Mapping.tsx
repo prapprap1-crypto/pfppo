@@ -109,6 +109,32 @@ const Mapping = () => {
     }
   };
 
+  const handleBulkImport = async (importMappings: Partial<ProductMapping>[]) => {
+    try {
+      for (const mapping of importMappings) {
+        await createProductMapping({
+          customer_code: mapping.customerCode || '',
+          customer_desc: mapping.customerDesc || '',
+          vendor_code: mapping.vendorCode || '',
+          vendor_desc: mapping.vendorDesc || '',
+          unit: mapping.unit || 'ลัง',
+          active: mapping.active ?? true,
+        });
+      }
+      
+      await logActivity({
+        action: 'mapping_created',
+        entity_type: 'mapping',
+        details: { imported_count: importMappings.length }
+      });
+      
+      loadMappings();
+    } catch (error) {
+      toast({ title: 'เกิดข้อผิดพลาดในการนำเข้า', variant: 'destructive' });
+      throw error;
+    }
+  };
+
   return (
     <MainLayout title="Mapping สินค้า" subtitle="จับคู่รหัสสินค้าลูกค้ากับรหัสผู้ขาย">
       <MappingTable 
@@ -116,6 +142,7 @@ const Mapping = () => {
         onAdd={handleAdd}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onBulkImport={handleBulkImport}
       />
     </MainLayout>
   );
