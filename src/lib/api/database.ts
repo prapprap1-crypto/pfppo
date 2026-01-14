@@ -207,6 +207,70 @@ export async function findMappingByCustomerCode(customerCode: string) {
   return data;
 }
 
+// Check if customer code exists in product_mappings
+export async function checkMappingExists(customerCode: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('product_mappings')
+    .select('id')
+    .eq('customer_code', customerCode)
+    .maybeSingle();
+  
+  if (error) throw error;
+  return !!data;
+}
+
+// Auto-create mappings for unmapped products (no duplicate codes)
+export async function autoCreateMappingsForItems(items: Array<{
+  customer_product_code: string;
+  customer_description: string;
+  unit?: string;
+}>) {
+  const newMappings: Array<{
+    customer_code: string;
+    customer_desc: string;
+    vendor_code: string;
+    vendor_desc: string;
+    unit: string;
+    active: boolean;
+  }> = [];
+  
+  // Track codes we've already processed to avoid duplicates within this batch
+  const processedCodes = new Set<string>();
+  
+  for (const item of items) {
+    const code = item.customer_product_code;
+    
+    // Skip if already processed in this batch
+    if (processedCodes.has(code)) continue;
+    processedCodes.add(code);
+    
+    // Check if mapping already exists in database
+    const exists = await checkMappingExists(code);
+    if (exists) continue;
+    
+    // Create new mapping with empty vendor info (to be filled later)
+    newMappings.push({
+      customer_code: code,
+      customer_desc: item.customer_description || '',
+      vendor_code: '', // Empty - to be mapped manually
+      vendor_desc: '', // Empty - to be mapped manually
+      unit: item.unit || 'ลัง',
+      active: true
+    });
+  }
+  
+  if (newMappings.length === 0) return [];
+  
+  // Insert all new mappings at once
+  const { data, error } = await supabase
+    .from('product_mappings')
+    .insert(newMappings)
+    .select();
+  
+  if (error) throw error;
+  return data;
+}
+
 // Export History
 export async function createExportHistory(exportData: {
   exported_pos: string[];
