@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { createPOHeader, createPOItems } from '@/lib/api/database';
+import { createPOHeader, createPOItems, autoCreateMappingsForItems } from '@/lib/api/database';
 import {
   Dialog,
   DialogContent,
@@ -219,6 +219,23 @@ export function FileUploadZone({
           }));
 
           await createPOItems(items);
+
+          // Auto-create mappings for unmapped products
+          try {
+            const createdMappings = await autoCreateMappingsForItems(
+              extractedData.items.map(item => ({
+                customer_product_code: item.customer_product_code,
+                customer_description: item.customer_description,
+                unit: item.unit
+              }))
+            );
+            if (createdMappings && createdMappings.length > 0) {
+              console.log(`Auto-created ${createdMappings.length} new product mappings`);
+            }
+          } catch (mappingError) {
+            console.error('Error auto-creating mappings:', mappingError);
+            // Don't fail the whole process if mapping creation fails
+          }
         }
 
         // Step 4: Done
