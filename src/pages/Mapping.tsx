@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { MappingTable } from '@/components/mapping/MappingTable';
-import { mockProductMappings } from '@/data/mockData';
 import { fetchProductMappings, createProductMapping, updateProductMapping, deleteProductMapping } from '@/lib/api/database';
 import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from '@/hooks/useActivityLog';
@@ -10,26 +9,28 @@ import { ProductMapping } from '@/types/po';
 const Mapping = () => {
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
-  const [mappings, setMappings] = useState<ProductMapping[]>(mockProductMappings);
+  const [mappings, setMappings] = useState<ProductMapping[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadMappings = async () => {
     try {
+      setLoading(true);
       const data = await fetchProductMappings();
-      if (data && data.length > 0) {
+      if (data) {
         setMappings(data.map((m: any) => ({
           id: m.id,
           customerCode: m.customer_code,
           customerDesc: m.customer_desc,
           vendorCode: m.vendor_code,
           vendorDesc: m.vendor_desc,
-          unit: m.unit,
-          active: m.active,
+          unit: m.unit || 'ลัง',
+          active: m.active ?? true,
           createdAt: m.created_at,
         })));
       }
     } catch (error) {
-      console.log('Using mock data:', error);
+      console.error('Error loading mappings:', error);
+      toast({ title: 'ไม่สามารถโหลดข้อมูลได้', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
