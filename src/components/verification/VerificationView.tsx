@@ -201,8 +201,8 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
               <TableHeader>
                 <TableRow className="table-header">
                   <TableHead className="w-8">#</TableHead>
-                  <TableHead>รหัสลูกค้า</TableHead>
-                  <TableHead>รหัสผู้ขาย</TableHead>
+                  <TableHead>รหัส/ชื่อสินค้า</TableHead>
+                  <TableHead>รหัสสินค้าจับคู่</TableHead>
                   <TableHead className="text-center">จำนวน</TableHead>
                   <TableHead className="text-right">ราคา/หน่วย</TableHead>
                   <TableHead className="text-right">รวม</TableHead>
