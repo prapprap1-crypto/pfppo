@@ -17,10 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Eye, FileCheck, Download, Search, Filter, Trash2, RefreshCw } from 'lucide-react';
+import { Eye, FileCheck, Download, Search, Filter, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { refreshPOMappings } from '@/lib/api/database';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +43,6 @@ export function POTable({ poList, onRefresh }: POTableProps) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [refreshingId, setRefreshingId] = useState<string | null>(null);
 
   const filteredList = poList.filter(po => {
     const matchesSearch = 
@@ -99,29 +97,6 @@ export function POTable({ poList, onRefresh }: POTableProps) {
         description: "ไม่สามารถลบ PO ได้",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleRefreshMapping = async (po: POHeader) => {
-    try {
-      setRefreshingId(po.id);
-      const result = await refreshPOMappings(po.id);
-      
-      toast({
-        title: "อัปเดต Mapping สำเร็จ",
-        description: `อัปเดต ${result.updated} จาก ${result.total} รายการ`,
-      });
-      
-      onRefresh?.();
-    } catch (error) {
-      console.error('Error refreshing mappings:', error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถอัปเดต mapping ได้",
-        variant: "destructive",
-      });
-    } finally {
-      setRefreshingId(null);
     }
   };
 
@@ -205,15 +180,6 @@ export function POTable({ poList, onRefresh }: POTableProps) {
                       <Link to={`/verification/${po.id}`}>
                         <Eye className="w-4 h-4" />
                       </Link>
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleRefreshMapping(po)}
-                      disabled={refreshingId === po.id}
-                      title="อัปเดต Mapping"
-                    >
-                      <RefreshCw className={cn("w-4 h-4 text-primary", refreshingId === po.id && "animate-spin")} />
                     </Button>
                     {po.status === 'IMPORTED' && (
                       <Button variant="ghost" size="icon" asChild>
