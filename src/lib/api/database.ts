@@ -207,6 +207,20 @@ export async function findMappingByCustomerCode(customerCode: string) {
   return data;
 }
 
+// Find mappings for multiple customer codes at once
+export async function findMappingsForCodes(customerCodes: string[]) {
+  if (customerCodes.length === 0) return [];
+  
+  const { data, error } = await supabase
+    .from('product_mappings')
+    .select('*')
+    .in('customer_code', customerCodes)
+    .eq('active', true);
+  
+  if (error) throw error;
+  return data || [];
+}
+
 // Check if customer code exists in product_mappings
 export async function checkMappingExists(customerCode: string): Promise<boolean> {
   const { data, error } = await supabase
