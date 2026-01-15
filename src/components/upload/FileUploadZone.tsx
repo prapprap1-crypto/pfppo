@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { createPOHeader, createPOItems, autoCreateMappingsForItems } from '@/lib/api/database';
+import { createPOHeader, createPOItems, autoCreateMappingsForItems, findMappingsForCodes } from '@/lib/api/database';
 import {
   Dialog,
   DialogContent,
@@ -206,17 +206,31 @@ export function FileUploadZone({
         });
 
         if (poHeader && extractedData.items?.length > 0) {
-          const items = extractedData.items.map((item) => ({
-            po_id: poHeader.id,
-            customer_product_code: item.customer_product_code,
-            customer_description: item.customer_description,
-            quantity: item.quantity,
-            unit: item.unit || 'ลัง',
-            unit_price: item.unit_price,
-            amount: item.amount,
-            delivery_date: item.delivery_date,
-            is_mapped: false
-          }));
+          // First, fetch existing mappings for all customer codes
+          const customerCodes = extractedData.items.map(item => item.customer_product_code);
+          const existingMappings = await findMappingsForCodes(customerCodes);
+          
+          // Create a map for quick lookup
+          const mappingMap = new Map(
+            existingMappings.map(m => [m.customer_code, m])
+          );
+
+          const items = extractedData.items.map((item) => {
+            const mapping = mappingMap.get(item.customer_product_code);
+            return {
+              po_id: poHeader.id,
+              customer_product_code: item.customer_product_code,
+              customer_description: item.customer_description,
+              vendor_product_code: mapping?.vendor_code || '',
+              vendor_description: mapping?.vendor_desc || '',
+              quantity: item.quantity,
+              unit: item.unit || 'ลัง',
+              unit_price: item.unit_price,
+              amount: item.amount,
+              delivery_date: item.delivery_date,
+              is_mapped: !!mapping && !!mapping.vendor_code
+            };
+          });
 
           await createPOItems(items);
 
@@ -234,7 +248,6 @@ export function FileUploadZone({
             }
           } catch (mappingError) {
             console.error('Error auto-creating mappings:', mappingError);
-            // Don't fail the whole process if mapping creation fails
           }
         }
 
