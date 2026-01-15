@@ -16,11 +16,13 @@ import {
   CheckCircle, 
   XCircle, 
   AlertTriangle, 
-  Save
+  Save,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { PdfViewer } from './PdfViewer';
+import { refreshPOMappings } from '@/lib/api/database';
 
 interface VerificationViewProps {
   po: POHeader;
@@ -37,6 +39,13 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   const [editedItems, setEditedItems] = useState<Record<string, Partial<POItem>>>({});
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [localItems, setLocalItems] = useState<POItem[]>(items);
+
+  // Update local items when props change
+  useEffect(() => {
+    setLocalItems(items);
+  }, [items]);
 
   // Load PDF URL from storage
   useEffect(() => {
@@ -107,7 +116,53 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
     onReject?.();
   };
 
-  const unmappedCount = items.filter(i => !i.isMapped).length;
+  const handleRefreshMapping = async () => {
+    try {
+      setIsRefreshing(true);
+      const result = await refreshPOMappings(po.id);
+      
+      // Reload items from database
+      const { data: updatedItems } = await supabase
+        .from('po_items')
+        .select('*')
+        .eq('po_id', po.id)
+        .order('created_at', { ascending: true });
+      
+      if (updatedItems) {
+        const mappedItems: POItem[] = updatedItems.map((item: any) => ({
+          id: item.id,
+          poId: item.po_id,
+          customerProductCode: item.customer_product_code,
+          customerDescription: item.customer_description || '',
+          vendorProductCode: item.vendor_product_code || '',
+          vendorDescription: item.vendor_description || '',
+          quantity: Number(item.quantity),
+          unit: item.unit || 'ลัง',
+          unitPrice: Number(item.unit_price),
+          amount: Number(item.amount),
+          deliveryDate: item.delivery_date || '',
+          isMapped: item.is_mapped || false,
+        }));
+        setLocalItems(mappedItems);
+      }
+
+      toast({
+        title: "อัปเดต Mapping สำเร็จ",
+        description: `อัปเดต ${result.updated} จาก ${result.total} รายการ`,
+      });
+    } catch (error) {
+      console.error('Error refreshing mappings:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถอัปเดต mapping ได้",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const unmappedCount = localItems.filter(i => !i.isMapped).length;
 
   return (
     <div className="space-y-4">
@@ -191,10 +246,21 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
         <div className="data-panel">
           <div className="bg-muted/50 p-2 border-b flex items-center justify-between">
             <span className="text-sm font-medium">ข้อมูลที่ระบบอ่านได้</span>
-            <Button variant="outline" size="sm">
-              <Save className="w-4 h-4 mr-1" />
-              บันทึก
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRefreshMapping}
+                disabled={isRefreshing}
+                title="อัปเดต Mapping จากฐานข้อมูล"
+              >
+                <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+              </Button>
+              <Button variant="outline" size="sm">
+                <Save className="w-4 h-4 mr-1" />
+                บันทึก
+              </Button>
+            </div>
           </div>
           <div className="overflow-auto">
             <Table>
@@ -209,7 +275,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((item, idx) => (
+                {localItems.map((item, idx) => (
                   <TableRow 
                     key={item.id}
                     className={cn(
