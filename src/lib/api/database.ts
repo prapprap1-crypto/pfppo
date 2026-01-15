@@ -118,6 +118,55 @@ export async function createPOItems(items: Array<{
   return data;
 }
 
+// Refresh mappings for all items in a PO
+export async function refreshPOMappings(poId: string) {
+  // Fetch all items for this PO
+  const items = await fetchPOItems(poId);
+  if (!items || items.length === 0) return { updated: 0, total: 0 };
+
+  // Get all customer codes
+  const customerCodes = items.map(item => item.customer_product_code);
+  
+  // Fetch all mappings for these codes
+  const { data: mappings, error: mappingError } = await supabase
+    .from('product_mappings')
+    .select('*')
+    .in('customer_code', customerCodes)
+    .eq('active', true);
+  
+  if (mappingError) throw mappingError;
+
+  // Create mapping lookup
+  const mappingMap = new Map(
+    (mappings || []).map(m => [m.customer_code, m])
+  );
+
+  // Update each item with mapping data
+  let updatedCount = 0;
+  for (const item of items) {
+    const mapping = mappingMap.get(item.customer_product_code);
+    const newVendorCode = mapping?.vendor_code || '';
+    const newVendorDesc = mapping?.vendor_desc || '';
+    const newIsMapped = !!mapping && !!mapping.vendor_code;
+
+    // Only update if there's a change
+    if (
+      item.vendor_product_code !== newVendorCode ||
+      item.vendor_description !== newVendorDesc ||
+      item.is_mapped !== newIsMapped
+    ) {
+      await updatePOItem(item.id, {
+        vendor_product_code: newVendorCode,
+        vendor_description: newVendorDesc,
+        is_mapped: newIsMapped
+      });
+      updatedCount++;
+    }
+  }
+
+  return { updated: updatedCount, total: items.length };
+}
+
 export async function updatePOItem(id: string, updates: Partial<{
   vendor_product_code: string;
   vendor_description: string;
