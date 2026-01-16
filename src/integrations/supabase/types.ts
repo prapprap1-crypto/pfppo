@@ -47,6 +47,36 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_mappings: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          customer_name: string
+          id: string
+          updated_at: string
+          vendor_customer_code: string
+          vendor_customer_name: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          customer_name: string
+          id?: string
+          updated_at?: string
+          vendor_customer_code: string
+          vendor_customer_name: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          customer_name?: string
+          id?: string
+          updated_at?: string
+          vendor_customer_code?: string
+          vendor_customer_name?: string
+        }
+        Relationships: []
+      }
       export_history: {
         Row: {
           exported_at: string
@@ -75,10 +105,12 @@ export type Database = {
         Row: {
           branch: string
           created_at: string
+          customer_name: string | null
           document_date: string
           due_date: string
           grand_total: number | null
           id: string
+          is_customer_mapped: boolean | null
           net_total: number | null
           po_number: string
           source_file: string | null
@@ -88,14 +120,18 @@ export type Database = {
           updated_at: string
           user_id: string | null
           vat: number | null
+          vendor_customer_code: string | null
+          vendor_customer_name: string | null
         }
         Insert: {
           branch: string
           created_at?: string
+          customer_name?: string | null
           document_date: string
           due_date: string
           grand_total?: number | null
           id?: string
+          is_customer_mapped?: boolean | null
           net_total?: number | null
           po_number: string
           source_file?: string | null
@@ -105,14 +141,18 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           vat?: number | null
+          vendor_customer_code?: string | null
+          vendor_customer_name?: string | null
         }
         Update: {
           branch?: string
           created_at?: string
+          customer_name?: string | null
           document_date?: string
           due_date?: string
           grand_total?: number | null
           id?: string
+          is_customer_mapped?: boolean | null
           net_total?: number | null
           po_number?: string
           source_file?: string | null
@@ -122,6 +162,8 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           vat?: number | null
+          vendor_customer_code?: string | null
+          vendor_customer_name?: string | null
         }
         Relationships: []
       }

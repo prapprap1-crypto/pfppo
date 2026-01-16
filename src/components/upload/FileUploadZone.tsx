@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { createPOHeader, createPOItems, autoCreateMappingsForItems, findMappingsForCodes } from '@/lib/api/database';
+import { createPOHeader, createPOItems, autoCreateMappingsForItems, findMappingsForCodes, findCustomerMappingByName, autoCreateCustomerMapping } from '@/lib/api/database';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,7 @@ type ProcessingStep = 'converting' | 'parsing' | 'saving' | 'done';
 
 interface ExtractedPOData {
   po_number: string;
+  customer_name?: string;
   supplier_code: string;
   supplier_name: string;
   branch: string;
@@ -190,9 +191,19 @@ export function FileUploadZone({
           // Continue even if storage upload fails
         }
 
+        // Find customer mapping if customer_name exists
+        let customerMapping = null;
+        if (extractedData.customer_name) {
+          customerMapping = await findCustomerMappingByName(extractedData.customer_name);
+        }
+
         // Save to database
         const poHeader = await createPOHeader({
           po_number: extractedData.po_number,
+          customer_name: extractedData.customer_name || null,
+          vendor_customer_code: customerMapping?.vendor_customer_code || '',
+          vendor_customer_name: customerMapping?.vendor_customer_name || '',
+          is_customer_mapped: !!customerMapping && !!customerMapping.vendor_customer_code,
           supplier_code: extractedData.supplier_code,
           supplier_name: extractedData.supplier_name,
           branch: extractedData.branch,
@@ -248,6 +259,15 @@ export function FileUploadZone({
             }
           } catch (mappingError) {
             console.error('Error auto-creating mappings:', mappingError);
+          }
+
+          // Auto-create customer mapping if not exists
+          if (extractedData.customer_name) {
+            try {
+              await autoCreateCustomerMapping(extractedData.customer_name);
+            } catch (customerMappingError) {
+              console.error('Error auto-creating customer mapping:', customerMappingError);
+            }
           }
         }
 
