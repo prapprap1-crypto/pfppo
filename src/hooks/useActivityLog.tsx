@@ -14,6 +14,9 @@ export type ActivityAction =
   | 'mapping_created'
   | 'mapping_updated'
   | 'mapping_deleted'
+  | 'customer_mapping_created'
+  | 'customer_mapping_updated'
+  | 'customer_mapping_deleted'
   | 'role_changed'
   | 'user_deleted';
 
@@ -63,9 +66,12 @@ export const getActionLabel = (action: string): string => {
     po_updated: 'อัปเดต PO',
     po_deleted: 'ลบ PO',
     po_exported: 'ส่งออก PO',
-    mapping_created: 'สร้าง Mapping ใหม่',
-    mapping_updated: 'อัปเดต Mapping',
-    mapping_deleted: 'ลบ Mapping',
+    mapping_created: 'สร้าง Mapping สินค้าใหม่',
+    mapping_updated: 'อัปเดต Mapping สินค้า',
+    mapping_deleted: 'ลบ Mapping สินค้า',
+    customer_mapping_created: 'สร้าง Mapping ลูกค้าใหม่',
+    customer_mapping_updated: 'อัปเดต Mapping ลูกค้า',
+    customer_mapping_deleted: 'ลบ Mapping ลูกค้า',
     role_changed: 'เปลี่ยนบทบาทผู้ใช้',
     user_deleted: 'ลบผู้ใช้'
   };

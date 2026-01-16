@@ -9,7 +9,8 @@ import {
   FolderOpen,
   Users,
   UserCircle,
-  Activity
+  Activity,
+  Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,6 +20,7 @@ const navItems = [
   { path: '/', label: 'แดชบอร์ด', icon: LayoutDashboard },
   { path: '/po-list', label: 'รายการ PO', icon: FileText },
   { path: '/mapping', label: 'Mapping สินค้า', icon: Layers },
+  { path: '/customer-mapping', label: 'Mapping ลูกค้า', icon: Building2 },
   { path: '/verification', label: 'ตรวจสอบเอกสาร', icon: FileCheck },
   { path: '/export', label: 'ส่งออก Excel', icon: Download },
   { path: '/activity-log', label: 'ประวัติการใช้งาน', icon: Activity },

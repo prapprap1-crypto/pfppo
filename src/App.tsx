@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import POList from "./pages/POList";
 import Mapping from "./pages/Mapping";
+import CustomerMapping from "./pages/CustomerMapping";
 import Verification from "./pages/Verification";
 import Export from "./pages/Export";
 import Users from "./pages/Users";
@@ -45,6 +46,7 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/po-list" element={<ProtectedRoute><POList /></ProtectedRoute>} />
       <Route path="/mapping" element={<ProtectedRoute><Mapping /></ProtectedRoute>} />
+      <Route path="/customer-mapping" element={<ProtectedRoute><CustomerMapping /></ProtectedRoute>} />
       <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
       <Route path="/verification/:id" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
       <Route path="/export" element={<ProtectedRoute><Export /></ProtectedRoute>} />
