@@ -45,6 +45,7 @@ IMPORTANT: The document is in Thai. Extract all data accurately FROM THE DOCUMEN
 Return a JSON object with this EXACT structure:
 {
   "po_number": "POB825124790",
+  "customer_name": "บริษัท บี เอ็น เอ็น เรสเตอรองท์ กรุ๊ป จำกัด",
   "supplier_code": "VLT-P0010",
   "supplier_name": "บริษัท พี.เอฟ.พี เทรดดิ้ง จำกัด",
   "branch": "ตะวันนา 2 บางกะปิ",
@@ -65,6 +66,12 @@ Return a JSON object with this EXACT structure:
     }
   ]
 }
+
+CRITICAL RULES for extracting customer_name:
+- Look at the TOP of the document for the ordering company name
+- It typically starts with "บริษัท" and ends with "จำกัด"
+- May include "(สำนักงานใหญ่)" or "(มหาชน)" - exclude these suffixes
+- Example: "บริษัท บี เอ็น เอ็น เรสเตอรองท์ กรุ๊ป จำกัด (สำนักงานใหญ่)" should become "บริษัท บี เอ็น เอ็น เรสเตอรองท์ กรุ๊ป จำกัด"
 
 CRITICAL RULES for extracting totals:
 - Look at the summary box on the bottom right of the document
