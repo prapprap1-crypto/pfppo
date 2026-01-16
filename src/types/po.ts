@@ -3,6 +3,10 @@ export type POStatus = 'NEW' | 'IMPORTED' | 'NEED_REVIEW' | 'VERIFIED' | 'EXPORT
 export interface POHeader {
   id: string;
   poNumber: string;
+  customerName?: string;
+  vendorCustomerCode?: string;
+  vendorCustomerName?: string;
+  isCustomerMapped?: boolean;
   supplierCode: string;
   supplierName: string;
   branch: string;
@@ -39,6 +43,15 @@ export interface ProductMapping {
   vendorCode: string;
   vendorDesc: string;
   unit: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface CustomerMapping {
+  id: string;
+  customerName: string;
+  vendorCustomerCode: string;
+  vendorCustomerName: string;
   active: boolean;
   createdAt: string;
 }
