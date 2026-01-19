@@ -408,12 +408,14 @@ export async function findCustomerMappingByName(customerName: string) {
 }
 
 // Find customer mapping with fuzzy matching (similarity threshold)
-export async function findCustomerMappingByNameFuzzy(customerName: string, minSimilarity: number = 85) {
+export async function findCustomerMappingByNameFuzzy(customerName: string, minSimilarity: number = 85): Promise<{ mapping: Awaited<ReturnType<typeof findCustomerMappingByName>>; similarity: number } | null> {
   if (!customerName) return null;
   
   // First try exact match
   const exactMatch = await findCustomerMappingByName(customerName);
-  if (exactMatch && exactMatch.vendor_customer_code) return exactMatch;
+  if (exactMatch && exactMatch.vendor_customer_code) {
+    return { mapping: exactMatch, similarity: 100 };
+  }
   
   // If no exact match, try fuzzy matching
   const allMappings = await fetchCustomerMappings();
@@ -435,7 +437,11 @@ export async function findCustomerMappingByNameFuzzy(customerName: string, minSi
     }
   }
   
-  return bestMatch;
+  if (bestMatch) {
+    return { mapping: bestMatch, similarity: bestSimilarity };
+  }
+  
+  return null;
 }
 
 export async function checkCustomerMappingExists(customerName: string): Promise<boolean> {
@@ -477,18 +483,23 @@ export async function autoCreateCustomerMapping(customerName: string) {
 // Refresh customer mapping for a PO (with fuzzy matching support)
 export async function refreshPOCustomerMapping(poId: string, useFuzzyMatch: boolean = true) {
   const poHeader = await fetchPOHeaderById(poId);
-  if (!poHeader || !poHeader.customer_name) return { updated: false, vendorCustomerName: '', fuzzyMatched: false };
+  if (!poHeader || !poHeader.customer_name) return { updated: false, vendorCustomerName: '', fuzzyMatched: false, similarity: 0 };
 
   // Try exact match first, then fuzzy match if enabled
   let mapping = await findCustomerMappingByName(poHeader.customer_name);
   let fuzzyMatched = false;
+  let similarity = 100;
   
   if (!mapping && useFuzzyMatch) {
-    mapping = await findCustomerMappingByNameFuzzy(poHeader.customer_name, 85);
-    if (mapping) fuzzyMatched = true;
+    const fuzzyResult = await findCustomerMappingByNameFuzzy(poHeader.customer_name, 85);
+    if (fuzzyResult) {
+      mapping = fuzzyResult.mapping;
+      similarity = fuzzyResult.similarity;
+      fuzzyMatched = similarity < 100;
+    }
   }
   
-  if (!mapping) return { updated: false, vendorCustomerName: '', fuzzyMatched: false };
+  if (!mapping) return { updated: false, vendorCustomerName: '', fuzzyMatched: false, similarity: 0 };
 
   const newVendorCode = mapping.vendor_customer_code || '';
   const newVendorName = mapping.vendor_customer_name || '';
@@ -504,10 +515,10 @@ export async function refreshPOCustomerMapping(poId: string, useFuzzyMatch: bool
       vendor_customer_name: newVendorName,
       is_customer_mapped: newIsMapped
     });
-    return { updated: true, vendorCustomerName: newVendorName, fuzzyMatched, matchedCustomerName: mapping.customer_name };
+    return { updated: true, vendorCustomerName: newVendorName, fuzzyMatched, matchedCustomerName: mapping.customer_name, similarity };
   }
 
-  return { updated: false, vendorCustomerName: newVendorName, fuzzyMatched };
+  return { updated: false, vendorCustomerName: newVendorName, fuzzyMatched, similarity };
 }
 
 // Customer Branch Mappings

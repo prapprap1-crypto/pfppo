@@ -192,11 +192,11 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
 
       if (result.updated) {
         const description = result.fuzzyMatched 
-          ? `จับคู่กับ "${result.matchedCustomerName}" → ${result.vendorCustomerName}`
+          ? `จับคู่กับ "${result.matchedCustomerName}" (${result.similarity}% ใกล้เคียง) → ${result.vendorCustomerName}`
           : `อัปเดตเป็น: ${result.vendorCustomerName}`;
         
         toast({
-          title: result.fuzzyMatched ? "พบ Mapping ที่ใกล้เคียง" : "อัปเดต Mapping ลูกค้าสำเร็จ",
+          title: result.fuzzyMatched ? `พบ Mapping ที่ใกล้เคียง (${result.similarity}%)` : "อัปเดต Mapping ลูกค้าสำเร็จ",
           description,
         });
       } else {
