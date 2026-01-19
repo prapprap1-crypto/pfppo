@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Eye, FileCheck, Download, Search, Filter, Trash2, Building2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Eye, FileCheck, Download, Search, Filter, Trash2, Building2, CheckCircle2, AlertTriangle, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -45,6 +45,7 @@ export function POTable({ poList, onRefresh }: POTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [customerMappingFilter, setCustomerMappingFilter] = useState<string>('all');
+  const [branchMappingFilter, setBranchMappingFilter] = useState<string>('all');
 
   const filteredList = poList.filter(po => {
     const matchesSearch = 
@@ -60,7 +61,12 @@ export function POTable({ poList, onRefresh }: POTableProps) {
       (customerMappingFilter === 'mapped' && po.isCustomerMapped) ||
       (customerMappingFilter === 'unmapped' && !po.isCustomerMapped);
     
-    return matchesSearch && matchesStatus && matchesCustomerMapping;
+    const matchesBranchMapping = 
+      branchMappingFilter === 'all' || 
+      (branchMappingFilter === 'mapped' && po.isBranchMapped) ||
+      (branchMappingFilter === 'unmapped' && !po.isBranchMapped);
+    
+    return matchesSearch && matchesStatus && matchesCustomerMapping && matchesBranchMapping;
   });
 
   const formatDate = (dateStr: string) => {
@@ -141,13 +147,26 @@ export function POTable({ poList, onRefresh }: POTableProps) {
         <div className="flex items-center gap-2">
           <Building2 className="w-4 h-4 text-muted-foreground" />
           <Select value={customerMappingFilter} onValueChange={setCustomerMappingFilter}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-40">
               <SelectValue placeholder="Mapping ลูกค้า" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">ทุก Mapping</SelectItem>
-              <SelectItem value="mapped">Mapped แล้ว</SelectItem>
-              <SelectItem value="unmapped">ยังไม่ Mapped</SelectItem>
+              <SelectItem value="all">ลูกค้า: ทั้งหมด</SelectItem>
+              <SelectItem value="mapped">ลูกค้า: Mapped</SelectItem>
+              <SelectItem value="unmapped">ลูกค้า: ยังไม่ Mapped</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-muted-foreground" />
+          <Select value={branchMappingFilter} onValueChange={setBranchMappingFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Mapping สาขา" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">สาขา: ทั้งหมด</SelectItem>
+              <SelectItem value="mapped">สาขา: Mapped</SelectItem>
+              <SelectItem value="unmapped">สาขา: ยังไม่ Mapped</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -200,7 +219,22 @@ export function POTable({ poList, onRefresh }: POTableProps) {
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-sm">{po.branch}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{po.branch}</span>
+                    {po.branch && (
+                      po.isBranchMapped ? (
+                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-200 gap-1 text-xs">
+                          <CheckCircle2 className="w-3 h-3" />
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-200 gap-1 text-xs">
+                          <AlertTriangle className="w-3 h-3" />
+                        </Badge>
+                      )
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="text-center text-sm">
                   {formatDate(po.dueDate)}
                 </TableCell>

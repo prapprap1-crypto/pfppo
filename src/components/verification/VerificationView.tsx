@@ -54,6 +54,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   const [localItems, setLocalItems] = useState<POItem[]>(items);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshingCustomer, setIsRefreshingCustomer] = useState(false);
+  const [isRefreshingBranch, setIsRefreshingBranch] = useState(false);
   const [localPO, setLocalPO] = useState<POHeader>(po);
 
   useEffect(() => {
@@ -203,6 +204,51 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
     }
   };
 
+  const handleRefreshBranchMapping = async () => {
+    try {
+      setIsRefreshingBranch(true);
+      
+      // Find branch mapping
+      const branchResult = await findBranchMapping(localPO.customerName || '', localPO.branch);
+      
+      if (branchResult?.branchMapping) {
+        setLocalPO({
+          ...localPO,
+          vendorBranchCode: branchResult.branchMapping.vendor_branch_code || undefined,
+          vendorBranchName: branchResult.branchMapping.vendor_branch_name || undefined,
+          isBranchMapped: !!(branchResult.branchMapping.vendor_branch_code),
+        });
+
+        toast({
+          title: "อัปเดต Mapping สาขาสำเร็จ",
+          description: `อัปเดตเป็น: ${branchResult.branchMapping.vendor_branch_name}`,
+        });
+      } else {
+        setLocalPO({
+          ...localPO,
+          vendorBranchCode: undefined,
+          vendorBranchName: undefined,
+          isBranchMapped: false,
+        });
+
+        toast({
+          title: "ไม่พบ Mapping สาขา",
+          description: "กรุณาเพิ่ม mapping ในหน้า Mapping ลูกค้า",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing branch mapping:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถอัปเดต mapping สาขาได้",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshingBranch(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Header Info */}
@@ -307,6 +353,16 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                 )}
               </div>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshBranchMapping}
+              disabled={isRefreshingBranch}
+              className="gap-2"
+            >
+              <RefreshCw className={cn("w-4 h-4", isRefreshingBranch && "animate-spin")} />
+              อัปเดต Mapping สาขา
+            </Button>
           </div>
         </div>
 
