@@ -7,6 +7,9 @@ export interface POHeader {
   vendorCustomerCode?: string;
   vendorCustomerName?: string;
   isCustomerMapped?: boolean;
+  vendorBranchCode?: string;
+  vendorBranchName?: string;
+  isBranchMapped?: boolean;
   supplierCode: string;
   supplierName: string;
   branch: string;
