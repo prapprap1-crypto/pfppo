@@ -363,28 +363,50 @@ export function QuickBranchMappingDialog({ customerName, branch, onSuccess }: Qu
         return;
       }
 
-      await createCustomerBranchMapping({
-        customer_mapping_id: customerMapping.id,
-        branch: branch,
-        vendor_branch_code: vendorCode,
-        vendor_branch_name: vendorName,
-        active: true,
-      });
+      // Check if branch mapping already exists
+      const existingBranchMapping = allBranchMappings.find(
+        m => m.customer_mapping_id === customerMapping.id && m.branch === branch
+      );
 
-      toast({
-        title: 'เพิ่ม Mapping สาขาสำเร็จ',
-        description: `${branch} → ${vendorName}`,
-      });
+      if (existingBranchMapping) {
+        // Update existing mapping
+        await updateCustomerBranchMapping(existingBranchMapping.id, {
+          vendor_branch_code: vendorCode,
+          vendor_branch_name: vendorName,
+        });
+
+        toast({
+          title: 'อัพเดท Mapping สาขาสำเร็จ',
+          description: `${branch} → ${vendorName}`,
+        });
+      } else {
+        // Create new mapping
+        await createCustomerBranchMapping({
+          customer_mapping_id: customerMapping.id,
+          branch: branch,
+          vendor_branch_code: vendorCode,
+          vendor_branch_name: vendorName,
+          active: true,
+        });
+
+        toast({
+          title: 'เพิ่ม Mapping สาขาสำเร็จ',
+          description: `${branch} → ${vendorName}`,
+        });
+      }
 
       setOpen(false);
       setVendorCode('');
       setVendorName('');
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating branch mapping:', error);
+      const errorMessage = error?.message?.includes('duplicate') 
+        ? 'สาขานี้มี mapping อยู่แล้ว' 
+        : 'ไม่สามารถสร้าง mapping ได้';
       toast({
         title: 'เกิดข้อผิดพลาด',
-        description: 'ไม่สามารถสร้าง mapping ได้',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
