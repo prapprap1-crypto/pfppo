@@ -589,9 +589,37 @@ export async function deleteCustomerBranchMapping(id: string) {
   if (error) throw error;
 }
 
-export async function findBranchMapping(customerName: string, branch: string, useFuzzy: boolean = false, minSimilarity: number = 85) {
-  // First find the customer mapping
-  const customerMapping = await findCustomerMappingByName(customerName);
+export async function findBranchMapping(customerName: string, branch: string, useFuzzy: boolean = false, minSimilarity: number = 85, vendorCustomerCode?: string) {
+  // First find the customer mapping - try by vendor code first if available, then by name
+  let customerMapping = null;
+  
+  if (vendorCustomerCode) {
+    // Try to find by vendor customer code first (more reliable)
+    const { data, error } = await supabase
+      .from('customer_mappings')
+      .select('*')
+      .eq('vendor_customer_code', vendorCustomerCode)
+      .eq('active', true)
+      .maybeSingle();
+    
+    if (!error && data) {
+      customerMapping = data;
+    }
+  }
+  
+  // If not found by vendor code, try by name
+  if (!customerMapping) {
+    customerMapping = await findCustomerMappingByName(customerName);
+  }
+  
+  // If still not found, try fuzzy matching on name
+  if (!customerMapping && useFuzzy && customerName) {
+    const fuzzyResult = await findCustomerMappingByNameFuzzy(customerName, minSimilarity);
+    if (fuzzyResult) {
+      customerMapping = fuzzyResult.mapping;
+    }
+  }
+  
   if (!customerMapping) return null;
 
   // Then find the branch mapping with exact match first
