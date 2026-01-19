@@ -213,7 +213,7 @@ export function FileUploadZone({
           vat: extractedData.vat,
           grand_total: extractedData.grand_total,
           source_file: uploadError ? null : filePath,
-          status: 'NEW'
+          status: 'NEED_REVIEW'
         });
 
         if (poHeader && extractedData.items?.length > 0) {
