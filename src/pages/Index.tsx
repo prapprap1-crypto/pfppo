@@ -106,7 +106,7 @@ const Index = () => {
             <StatusChart stats={stats} />
             <div className="bg-card rounded-xl border p-5">
               <h3 className="font-semibold mb-4">นำเข้า PO ใหม่</h3>
-              <FileUploadZone maxFiles={5} onUploadComplete={handleUploadComplete} />
+              <FileUploadZone maxFiles={20} onUploadComplete={handleUploadComplete} />
             </div>
           </div>
         </div>
