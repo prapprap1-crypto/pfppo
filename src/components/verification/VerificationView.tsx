@@ -171,7 +171,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   const handleRefreshCustomerMapping = async () => {
     try {
       setIsRefreshingCustomer(true);
-      const result = await refreshPOCustomerMapping(po.id);
+      const result = await refreshPOCustomerMapping(po.id, true);
       
       // Reload PO header from database
       const { data: updatedPO } = await supabase
@@ -190,13 +190,22 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
         });
       }
 
-      toast({
-        title: result.updated ? "อัปเดต Mapping ลูกค้าสำเร็จ" : "ไม่พบ Mapping ลูกค้า",
-        description: result.updated 
-          ? `อัปเดตเป็น: ${result.vendorCustomerName}` 
-          : "กรุณาเพิ่ม mapping ในหน้า Mapping ลูกค้า",
-        variant: result.updated ? "default" : "destructive",
-      });
+      if (result.updated) {
+        const description = result.fuzzyMatched 
+          ? `จับคู่กับ "${result.matchedCustomerName}" → ${result.vendorCustomerName}`
+          : `อัปเดตเป็น: ${result.vendorCustomerName}`;
+        
+        toast({
+          title: result.fuzzyMatched ? "พบ Mapping ที่ใกล้เคียง" : "อัปเดต Mapping ลูกค้าสำเร็จ",
+          description,
+        });
+      } else {
+        toast({
+          title: "ไม่พบ Mapping ลูกค้า",
+          description: "กรุณาเพิ่ม mapping ในหน้า Mapping ลูกค้า",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Error refreshing customer mapping:', error);
       toast({
