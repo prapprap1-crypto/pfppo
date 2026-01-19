@@ -399,10 +399,10 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                 </div>
                 {localPO.isBranchMapped && localPO.vendorBranchCode && (
                   <div className="text-sm text-muted-foreground mt-1">
-                    <span>รหัส Vendor: </span>
+                    <span>รหัสสาขา: </span>
                     <span className="font-medium text-foreground">{localPO.vendorBranchCode}</span>
                     <span className="mx-2">|</span>
-                    <span>ชื่อ Vendor: </span>
+                    <span>ชื่อสาขา: </span>
                     <span className="font-medium text-foreground">{localPO.vendorBranchName}</span>
                   </div>
                 )}
