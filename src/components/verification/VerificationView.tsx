@@ -238,15 +238,42 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
     try {
       setIsRefreshingBranch(true);
       
+      // Check if customer is mapped first
+      if (!localPO.isCustomerMapped) {
+        toast({
+          title: "กรุณา Mapping ลูกค้าก่อน",
+          description: "ต้อง Mapping ลูกค้าให้เสร็จก่อนจึงจะสามารถ Mapping สาขาได้",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Find branch mapping with fuzzy matching enabled (85% threshold)
       const branchResult = await findBranchMapping(localPO.customerName || '', localPO.branch, true, 85);
       
-      if (branchResult?.branchMapping) {
-        setLocalPO({
+      if (!branchResult) {
+        toast({
+          title: "ไม่พบ Mapping ลูกค้า",
+          description: "กรุณา Mapping ลูกค้าก่อน",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (branchResult.branchMapping) {
+        // Update local state
+        const updatedPO = {
           ...localPO,
           vendorBranchCode: branchResult.branchMapping.vendor_branch_code || undefined,
           vendorBranchName: branchResult.branchMapping.vendor_branch_name || undefined,
           isBranchMapped: !!(branchResult.branchMapping.vendor_branch_code),
+        };
+        setLocalPO(updatedPO);
+
+        // Also update database
+        await updatePOHeader(po.id, {
+          vendor_branch_code: branchResult.branchMapping.vendor_branch_code || null,
+          vendor_branch_name: branchResult.branchMapping.vendor_branch_name || null,
         });
 
         const description = branchResult.fuzzyMatched 
@@ -269,7 +296,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
 
         toast({
           title: "ไม่พบ Mapping สาขา",
-          description: "กรุณาเพิ่ม mapping ในหน้า Mapping ลูกค้า",
+          description: `ไม่พบสาขาที่ตรงกับ "${localPO.branch}" - กรุณาเพิ่ม mapping ในหน้า Mapping ลูกค้า`,
           variant: "destructive",
         });
       }
