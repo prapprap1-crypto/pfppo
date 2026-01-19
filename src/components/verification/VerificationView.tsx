@@ -249,7 +249,14 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
       }
 
       // Find branch mapping with fuzzy matching enabled (85% threshold)
-      const branchResult = await findBranchMapping(localPO.customerName || '', localPO.branch, true, 85);
+      // Pass vendorCustomerCode to help find the correct customer mapping
+      const branchResult = await findBranchMapping(
+        localPO.customerName || '', 
+        localPO.branch, 
+        true, 
+        85,
+        localPO.vendorCustomerCode // Use vendor code for more reliable lookup
+      );
       
       if (!branchResult) {
         toast({
