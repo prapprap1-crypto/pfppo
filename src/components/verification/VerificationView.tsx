@@ -1,28 +1,24 @@
 import { useState, useEffect } from 'react';
-import { POHeader, POItem, STATUS_LABELS, STATUS_CLASSES } from '@/types/po';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { 
-  CheckCircle, 
-  XCircle, 
   AlertTriangle, 
-  Save,
-  RefreshCw
+  CheckCircle2, 
+  XCircle, 
+  FileText, 
+  RefreshCw,
+  Building2,
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { POHeader, POItem } from '@/types/po';
+import { refreshPOMappings, refreshPOCustomerMapping } from '@/lib/api/database';
+import { supabase } from '@/integrations/supabase/client';
 import { PdfViewer } from './PdfViewer';
-import { refreshPOMappings } from '@/lib/api/database';
 
 interface VerificationViewProps {
   po: POHeader;
@@ -31,58 +27,61 @@ interface VerificationViewProps {
   onReject?: () => void;
 }
 
+const STATUS_LABELS: Record<POHeader['status'], string> = {
+  NEW: 'ใหม่',
+  IMPORTED: 'นำเข้าแล้ว',
+  NEED_REVIEW: 'รอตรวจสอบ',
+  VERIFIED: 'ตรวจสอบแล้ว',
+  EXPORTED: 'ส่งออกแล้ว',
+  ERROR: 'ผิดพลาด',
+};
+
+const STATUS_CLASSES: Record<POHeader['status'], string> = {
+  NEW: 'bg-blue-500/10 text-blue-600 border-blue-200',
+  IMPORTED: 'bg-green-500/10 text-green-600 border-green-200',
+  NEED_REVIEW: 'bg-yellow-500/10 text-yellow-600 border-yellow-200',
+  VERIFIED: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+  EXPORTED: 'bg-purple-500/10 text-purple-600 border-purple-200',
+  ERROR: 'bg-red-500/10 text-red-600 border-red-200',
+};
+
 export function VerificationView({ po, items, onVerify, onReject }: VerificationViewProps) {
   const { toast } = useToast();
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(100);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [editedItems, setEditedItems] = useState<Record<string, Partial<POItem>>>({});
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [editedItems, setEditedItems] = useState<Record<string, Partial<POItem>>>({});
   const [localItems, setLocalItems] = useState<POItem[]>(items);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshingCustomer, setIsRefreshingCustomer] = useState(false);
+  const [localPO, setLocalPO] = useState<POHeader>(po);
 
-  // Update local items when props change
   useEffect(() => {
     setLocalItems(items);
   }, [items]);
 
-  // Load PDF URL from storage
+  useEffect(() => {
+    setLocalPO(po);
+  }, [po]);
+
   useEffect(() => {
     const loadPdfUrl = async () => {
-      if (!po.sourceFile) return;
-      
-      setPdfLoading(true);
-      try {
+      if (po.sourceFile) {
         const { data } = await supabase.storage
           .from('po-files')
-          .createSignedUrl(po.sourceFile, 3600); // 1 hour expiry
+          .createSignedUrl(po.sourceFile, 3600);
         
         if (data?.signedUrl) {
-          // Get public URL for the file with the signed token
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          // signedUrl format: /object/sign/bucket/path?token=xxx
-          // Need to build: https://xxx.supabase.co/storage/v1/object/sign/bucket/path?token=xxx
-          const fullUrl = data.signedUrl.startsWith('http') 
-            ? data.signedUrl 
-            : `${supabaseUrl}/storage/v1${data.signedUrl}`;
-          console.log('PDF URL:', fullUrl);
-          setPdfUrl(fullUrl);
+          setPdfUrl(data.signedUrl);
         }
-      } catch (error) {
-        console.error('Error loading PDF:', error);
-      } finally {
-        setPdfLoading(false);
       }
     };
-
     loadPdfUrl();
   }, [po.sourceFile]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('th-TH', {
-      minimumFractionDigits: 2,
-    }).format(amount);
+  const unmappedCount = localItems.filter(item => !item.isMapped).length;
+
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   const handleItemEdit = (itemId: string, field: keyof POItem, value: string | number) => {
@@ -101,16 +100,16 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
 
   const handleVerify = () => {
     toast({
-      title: "ยืนยันความถูกต้อง",
-      description: `PO ${po.poNumber} ได้รับการยืนยันแล้ว`,
+      title: "ยืนยันเอกสารสำเร็จ",
+      description: `เอกสาร ${po.poNumber} ได้รับการยืนยันแล้ว`,
     });
     onVerify?.();
   };
 
   const handleReject = () => {
     toast({
-      title: "ส่งกลับแก้ไข",
-      description: `PO ${po.poNumber} ถูกส่งกลับเพื่อแก้ไข`,
+      title: "ปฏิเสธเอกสาร",
+      description: `เอกสาร ${po.poNumber} ถูกปฏิเสธ`,
       variant: "destructive",
     });
     onReject?.();
@@ -147,14 +146,14 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
       }
 
       toast({
-        title: "อัปเดต Mapping สำเร็จ",
+        title: "อัปเดต Mapping สินค้าสำเร็จ",
         description: `อัปเดต ${result.updated} จาก ${result.total} รายการ`,
       });
     } catch (error) {
       console.error('Error refreshing mappings:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถอัปเดต mapping ได้",
+        description: "ไม่สามารถอัปเดต mapping สินค้าได้",
         variant: "destructive",
       });
     } finally {
@@ -162,7 +161,46 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
     }
   };
 
-  const unmappedCount = localItems.filter(i => !i.isMapped).length;
+  const handleRefreshCustomerMapping = async () => {
+    try {
+      setIsRefreshingCustomer(true);
+      const result = await refreshPOCustomerMapping(po.id);
+      
+      // Reload PO header from database
+      const { data: updatedPO } = await supabase
+        .from('po_headers')
+        .select('*')
+        .eq('id', po.id)
+        .maybeSingle();
+      
+      if (updatedPO) {
+        setLocalPO({
+          ...localPO,
+          customerName: updatedPO.customer_name || undefined,
+          vendorCustomerCode: updatedPO.vendor_customer_code || undefined,
+          vendorCustomerName: updatedPO.vendor_customer_name || undefined,
+          isCustomerMapped: updatedPO.is_customer_mapped || false,
+        });
+      }
+
+      toast({
+        title: result.updated ? "อัปเดต Mapping ลูกค้าสำเร็จ" : "ไม่พบ Mapping ลูกค้า",
+        description: result.updated 
+          ? `อัปเดตเป็น: ${result.vendorCustomerName}` 
+          : "กรุณาเพิ่ม mapping ในหน้า Mapping ลูกค้า",
+        variant: result.updated ? "default" : "destructive",
+      });
+    } catch (error) {
+      console.error('Error refreshing customer mapping:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถอัปเดต mapping ลูกค้าได้",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshingCustomer(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -171,16 +209,16 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <span className="text-lg font-bold text-primary">{po.poNumber.slice(-3)}</span>
+              <span className="text-lg font-bold text-primary">{localPO.poNumber.slice(-3)}</span>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">{po.poNumber}</h2>
-              <p className="text-muted-foreground">{po.supplierName}</p>
+              <h2 className="text-xl font-bold text-foreground">{localPO.poNumber}</h2>
+              <p className="text-muted-foreground">{localPO.supplierName}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className={cn('status-badge', STATUS_CLASSES[po.status])}>
-              {STATUS_LABELS[po.status]}
+            <span className={cn('status-badge px-3 py-1 rounded-full text-sm font-medium border', STATUS_CLASSES[localPO.status])}>
+              {STATUS_LABELS[localPO.status]}
             </span>
             {unmappedCount > 0 && (
               <Badge variant="destructive" className="gap-1">
@@ -190,18 +228,64 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
             )}
           </div>
         </div>
+
+        {/* Customer Mapping Info */}
+        <div className="mt-4 p-3 rounded-lg bg-muted/50 border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Building2 className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">ลูกค้า:</span>
+                  <span className="font-medium">{localPO.customerName || '-'}</span>
+                  {localPO.isCustomerMapped ? (
+                    <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-200 gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Mapped
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-200 gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      ยังไม่ได้ Mapping
+                    </Badge>
+                  )}
+                </div>
+                {localPO.isCustomerMapped && localPO.vendorCustomerCode && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    <span>รหัส Vendor: </span>
+                    <span className="font-medium text-foreground">{localPO.vendorCustomerCode}</span>
+                    <span className="mx-2">|</span>
+                    <span>ชื่อ Vendor: </span>
+                    <span className="font-medium text-foreground">{localPO.vendorCustomerName}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshCustomerMapping}
+              disabled={isRefreshingCustomer}
+              className="gap-2"
+            >
+              <RefreshCw className={cn("w-4 h-4", isRefreshingCustomer && "animate-spin")} />
+              อัปเดต Mapping ลูกค้า
+            </Button>
+          </div>
+        </div>
+
         <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-sm">
           <div>
             <span className="text-muted-foreground">สาขา:</span>
-            <p className="font-medium">{po.branch || '-'}</p>
+            <p className="font-medium">{localPO.branch || '-'}</p>
           </div>
           <div>
             <span className="text-muted-foreground">วันครบกำหนด:</span>
-            <p className="font-medium">{new Date(po.dueDate).toLocaleDateString('th-TH')}</p>
+            <p className="font-medium">{new Date(localPO.dueDate).toLocaleDateString('th-TH')}</p>
           </div>
           <div>
             <span className="text-muted-foreground">รวมมูลค่า:</span>
-            <p className="font-medium">฿{formatCurrency(po.netTotal)}</p>
+            <p className="font-medium">฿{formatCurrency(localPO.netTotal)}</p>
           </div>
           <div>
             <span className="text-muted-foreground">ส่วนลด:</span>
@@ -209,145 +293,126 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
           </div>
           <div>
             <span className="text-muted-foreground">มูลค่าหลังหักส่วนลด:</span>
-            <p className="font-medium">฿{formatCurrency(po.netTotal)}</p>
+            <p className="font-medium">฿{formatCurrency(localPO.netTotal)}</p>
           </div>
           <div>
             <span className="text-muted-foreground">ภาษีมูลค่าเพิ่ม 7%:</span>
-            <p className="font-medium">฿{formatCurrency(po.vat)}</p>
+            <p className="font-medium">฿{formatCurrency(localPO.vat)}</p>
           </div>
           <div>
             <span className="text-muted-foreground">มูลค่าสุทธิ:</span>
-            <p className="font-bold text-lg text-primary">฿{formatCurrency(po.grandTotal)}</p>
+            <p className="font-bold text-lg text-primary">฿{formatCurrency(localPO.grandTotal)}</p>
           </div>
         </div>
       </div>
 
-      {/* Split Panel View */}
-      <div className="split-panel">
-        {/* PDF Preview Panel */}
-        <div className="pdf-preview-panel">
-          {pdfLoading ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-2 p-8">
-              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <p className="text-muted-foreground text-sm">กำลังโหลด PDF...</p>
-            </div>
-          ) : pdfUrl ? (
-            <PdfViewer url={pdfUrl} fileName={`${po.poNumber}.pdf`} />
+      {/* Split View: PDF + Items */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* PDF Preview */}
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <FileText className="w-5 h-5 text-primary" />
+            <h3 className="font-semibold">เอกสาร PDF</h3>
+          </div>
+          {pdfUrl ? (
+            <PdfViewer url={pdfUrl} />
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center gap-2 p-8 text-muted-foreground">
-              <AlertTriangle className="w-12 h-12 text-warning" />
-              <p className="text-sm">ไม่พบไฟล์ PDF สำหรับ PO นี้</p>
-              <p className="text-xs">กรุณาอัปโหลดไฟล์ใหม่อีกครั้ง</p>
+            <div className="h-[500px] flex items-center justify-center bg-muted rounded-lg">
+              <p className="text-muted-foreground">ไม่มีไฟล์ PDF</p>
             </div>
           )}
-        </div>
+        </Card>
 
-        {/* Data Panel */}
-        <div className="data-panel">
-          <div className="bg-muted/50 p-2 border-b flex items-center justify-between">
-            <span className="text-sm font-medium">ข้อมูลที่ระบบอ่านได้</span>
+        {/* Items Table */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleRefreshMapping}
-                disabled={isRefreshing}
-                title="อัปเดต Mapping จากฐานข้อมูล"
-              >
-                <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
-              </Button>
-              <Button variant="outline" size="sm">
-                <Save className="w-4 h-4 mr-1" />
-                บันทึก
-              </Button>
+              <Package className="w-5 h-5 text-primary" />
+              <h3 className="font-semibold">รายการสินค้า ({localItems.length} รายการ)</h3>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshMapping}
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+              อัปเดต Mapping สินค้า
+            </Button>
           </div>
-          <div className="overflow-auto">
+          
+          <div className="overflow-auto max-h-[500px]">
             <Table>
               <TableHeader>
-                <TableRow className="table-header">
-                  <TableHead className="w-8">#</TableHead>
-                  <TableHead>รหัส/ชื่อสินค้า</TableHead>
-                  <TableHead>รหัสสินค้าจับคู่</TableHead>
-                  <TableHead className="text-center">จำนวน</TableHead>
+                <TableRow>
+                  <TableHead className="w-[60px]">#</TableHead>
+                  <TableHead>รหัสลูกค้า</TableHead>
+                  <TableHead>รายละเอียด</TableHead>
+                  <TableHead>รหัส Vendor</TableHead>
+                  <TableHead className="text-right">จำนวน</TableHead>
                   <TableHead className="text-right">ราคา/หน่วย</TableHead>
                   <TableHead className="text-right">รวม</TableHead>
+                  <TableHead className="w-[80px]">สถานะ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {localItems.map((item, idx) => (
-                  <TableRow 
-                    key={item.id}
-                    className={cn(
-                      'cursor-pointer transition-colors',
-                      selectedItemId === item.id && 'bg-accent/10',
-                      !item.isMapped && 'bg-warning/5'
-                    )}
-                    onClick={() => setSelectedItemId(item.id)}
-                  >
-                    <TableCell className="font-medium">{idx + 1}</TableCell>
+                {localItems.map((item, index) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{index + 1}</TableCell>
+                    <TableCell className="font-mono text-sm">{item.customerProductCode}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{item.customerDescription}</TableCell>
                     <TableCell>
-                      <div>
-                        <p className="font-mono text-primary text-sm">{item.customerProductCode}</p>
-                        <p className="text-xs text-muted-foreground truncate max-w-32">{item.customerDescription}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {item.isMapped ? (
-                        <div>
-                          <p className="font-mono text-sm">{item.vendorProductCode}</p>
-                          <p className="text-xs text-muted-foreground truncate max-w-32">{item.vendorDescription}</p>
-                        </div>
+                      {item.vendorProductCode ? (
+                        <span className="font-mono text-sm text-green-600">{item.vendorProductCode}</span>
                       ) : (
-                        <Badge variant="outline" className="text-warning border-warning">
-                          <AlertTriangle className="w-3 h-3 mr-1" />
-                          ไม่พบ mapping
-                        </Badge>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-center">
-                      <Input 
+                    <TableCell className="text-right">
+                      <Input
                         type="number"
-                        value={getItemValue(item, 'quantity') as number}
+                        value={Number(getItemValue(item, 'quantity'))}
                         onChange={(e) => handleItemEdit(item.id, 'quantity', Number(e.target.value))}
-                        className="w-16 h-7 text-center text-sm"
+                        className="w-20 text-right"
                       />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Input 
+                      <Input
                         type="number"
-                        value={getItemValue(item, 'unitPrice') as number}
+                        value={Number(getItemValue(item, 'unitPrice'))}
                         onChange={(e) => handleItemEdit(item.id, 'unitPrice', Number(e.target.value))}
-                        className="w-24 h-7 text-right text-sm"
+                        className="w-24 text-right"
                       />
                     </TableCell>
-                    <TableCell className="text-right font-semibold">
+                    <TableCell className="text-right font-medium">
                       ฿{formatCurrency(item.amount)}
+                    </TableCell>
+                    <TableCell>
+                      {item.isMapped ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
+        </Card>
+      </div>
 
-          {/* Action Buttons */}
-          <div className="border-t p-4 flex items-center justify-between bg-muted/30">
-            <div className="text-sm">
-              <p className="text-muted-foreground">รวมทั้งหมด {items.length} รายการ</p>
-              <p className="font-bold text-lg">฿{formatCurrency(po.grandTotal)}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={handleReject} className="border-destructive text-destructive hover:bg-destructive/10">
-                <XCircle className="w-4 h-4 mr-2" />
-                ส่งกลับแก้ไข
-              </Button>
-              <Button onClick={handleVerify} className="bg-success hover:bg-success/90">
-                <CheckCircle className="w-4 h-4 mr-2" />
-                ยืนยันความถูกต้อง
-              </Button>
-            </div>
-          </div>
-        </div>
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-3">
+        <Button variant="outline" onClick={handleReject} className="gap-2">
+          <XCircle className="w-4 h-4" />
+          ปฏิเสธ
+        </Button>
+        <Button onClick={handleVerify} className="gap-2">
+          <CheckCircle2 className="w-4 h-4" />
+          ยืนยันเอกสาร
+        </Button>
       </div>
     </div>
   );
