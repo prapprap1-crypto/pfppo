@@ -6,9 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Calendar, Package, Eye, Download } from 'lucide-react';
+import { FileText, Calendar, Package, Eye, Download, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
+import { generateC303Excel } from '@/lib/utils/excel';
+import { useToast } from '@/hooks/use-toast';
 
 interface ExportHistoryRecord {
   id: string;
@@ -22,17 +24,32 @@ interface PODetail {
   id: string;
   po_number: string;
   supplier_name: string;
+  supplier_code: string;
   branch: string;
   grand_total: number | null;
   document_date: string;
+  due_date: string;
+}
+
+interface POItem {
+  id: string;
+  po_id: string;
+  vendor_product_code: string | null;
+  vendor_description: string | null;
+  quantity: number;
+  unit: string | null;
+  unit_price: number;
+  amount: number;
 }
 
 const ExportHistory = () => {
+  const { toast } = useToast();
   const [history, setHistory] = useState<ExportHistoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedExport, setSelectedExport] = useState<ExportHistoryRecord | null>(null);
   const [poDetails, setPODetails] = useState<PODetail[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [redownloading, setRedownloading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchHistory();
@@ -59,7 +76,7 @@ const ExportHistory = () => {
     try {
       const { data, error } = await supabase
         .from('po_headers')
-        .select('id, po_number, supplier_name, branch, grand_total, document_date')
+        .select('id, po_number, supplier_name, supplier_code, branch, grand_total, document_date, due_date')
         .in('id', poIds);
 
       if (error) throw error;
@@ -75,6 +92,84 @@ const ExportHistory = () => {
   const handleViewDetails = (record: ExportHistoryRecord) => {
     setSelectedExport(record);
     fetchPODetails(record.exported_pos);
+  };
+
+  const handleRedownload = async (record: ExportHistoryRecord) => {
+    setRedownloading(record.id);
+    try {
+      // Fetch PO headers for the exported POs
+      const { data: poHeaders, error: poError } = await supabase
+        .from('po_headers')
+        .select('id, po_number, supplier_code, branch, due_date')
+        .in('id', record.exported_pos);
+
+      if (poError) throw poError;
+      if (!poHeaders || poHeaders.length === 0) {
+        toast({
+          title: "ไม่พบข้อมูล",
+          description: "ไม่พบข้อมูล PO ที่ส่งออก",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Fetch all items for these POs
+      const { data: poItems, error: itemsError } = await supabase
+        .from('po_items')
+        .select('*')
+        .in('po_id', record.exported_pos);
+
+      if (itemsError) throw itemsError;
+
+      // Build export items
+      const allItems: Array<{
+        po_number: string;
+        due_date: string;
+        branch: string;
+        supplier_code: string;
+        vendor_product_code: string;
+        vendor_description: string;
+        quantity: number;
+        unit: string;
+        unit_price: number;
+        amount: number;
+      }> = [];
+
+      for (const po of poHeaders) {
+        const items = (poItems || []).filter(item => item.po_id === po.id);
+        for (const item of items) {
+          allItems.push({
+            po_number: po.po_number,
+            due_date: po.due_date,
+            branch: po.branch,
+            supplier_code: po.supplier_code,
+            vendor_product_code: item.vendor_product_code || '',
+            vendor_description: item.vendor_description || '',
+            quantity: item.quantity,
+            unit: item.unit || 'ลัง',
+            unit_price: item.unit_price,
+            amount: item.amount,
+          });
+        }
+      }
+
+      // Generate Excel
+      generateC303Excel(allItems, record.file_name);
+
+      toast({
+        title: "ดาวน์โหลดสำเร็จ",
+        description: `ดาวน์โหลดไฟล์ ${record.file_name}`,
+      });
+    } catch (error) {
+      console.error('Error re-downloading:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถดาวน์โหลดไฟล์ได้",
+        variant: "destructive",
+      });
+    } finally {
+      setRedownloading(null);
+    }
   };
 
   const formatCurrency = (amount: number | null) => {
@@ -193,83 +288,98 @@ const ExportHistory = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleViewDetails(record)}
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              ดูรายละเอียด
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle className="flex items-center gap-2">
-                                <FileText className="w-5 h-5" />
-                                รายละเอียดการส่งออก: {selectedExport?.file_name}
-                              </DialogTitle>
-                            </DialogHeader>
-                            
-                            {loadingDetails ? (
-                              <div className="flex items-center justify-center py-8">
-                                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                              </div>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleRedownload(record)}
+                            disabled={redownloading === record.id}
+                          >
+                            {redownloading === record.id ? (
+                              <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
                             ) : (
-                              <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">วันที่ส่งออก</p>
-                                    <p className="font-medium">
-                                      {selectedExport && format(new Date(selectedExport.exported_at), 'd MMMM yyyy HH:mm น.', { locale: th })}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">มูลค่ารวม</p>
-                                    <p className="font-medium text-primary">
-                                      {formatCurrency(totalExportedAmount)}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>เลขที่ PO</TableHead>
-                                      <TableHead>ลูกค้า</TableHead>
-                                      <TableHead>สาขา</TableHead>
-                                      <TableHead>วันที่เอกสาร</TableHead>
-                                      <TableHead className="text-right">มูลค่า</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {poDetails.map((po) => (
-                                      <TableRow key={po.id}>
-                                        <TableCell className="font-medium">{po.po_number}</TableCell>
-                                        <TableCell>{po.supplier_name}</TableCell>
-                                        <TableCell>{po.branch}</TableCell>
-                                        <TableCell>
-                                          {format(new Date(po.document_date), 'd MMM yy', { locale: th })}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                          {formatCurrency(po.grand_total)}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-
-                                <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-                                  <span className="font-medium">รวมทั้งหมด ({poDetails.length} รายการ)</span>
-                                  <span className="text-lg font-bold text-primary">
-                                    {formatCurrency(totalExportedAmount)}
-                                  </span>
-                                </div>
-                              </div>
+                              <Download className="w-4 h-4 mr-1" />
                             )}
-                          </DialogContent>
-                        </Dialog>
+                            ดาวน์โหลด
+                          </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleViewDetails(record)}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                ดูรายละเอียด
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                  <FileText className="w-5 h-5" />
+                                  รายละเอียดการส่งออก: {selectedExport?.file_name}
+                                </DialogTitle>
+                              </DialogHeader>
+                              
+                              {loadingDetails ? (
+                                <div className="flex items-center justify-center py-8">
+                                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                                </div>
+                              ) : (
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">วันที่ส่งออก</p>
+                                      <p className="font-medium">
+                                        {selectedExport && format(new Date(selectedExport.exported_at), 'd MMMM yyyy HH:mm น.', { locale: th })}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">มูลค่ารวม</p>
+                                      <p className="font-medium text-primary">
+                                        {formatCurrency(totalExportedAmount)}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>เลขที่ PO</TableHead>
+                                        <TableHead>ลูกค้า</TableHead>
+                                        <TableHead>สาขา</TableHead>
+                                        <TableHead>วันที่เอกสาร</TableHead>
+                                        <TableHead className="text-right">มูลค่า</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {poDetails.map((po) => (
+                                        <TableRow key={po.id}>
+                                          <TableCell className="font-medium">{po.po_number}</TableCell>
+                                          <TableCell>{po.supplier_name}</TableCell>
+                                          <TableCell>{po.branch}</TableCell>
+                                          <TableCell>
+                                            {format(new Date(po.document_date), 'd MMM yy', { locale: th })}
+                                          </TableCell>
+                                          <TableCell className="text-right">
+                                            {formatCurrency(po.grand_total)}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+
+                                  <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
+                                    <span className="font-medium">รวมทั้งหมด ({poDetails.length} รายการ)</span>
+                                    <span className="text-lg font-bold text-primary">
+                                      {formatCurrency(totalExportedAmount)}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
