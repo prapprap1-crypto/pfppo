@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,7 +24,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Plus, Building2, MapPin, Package, Loader2, Search, Check } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Building2, MapPin, Package, Loader2, Search, Check, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   createCustomerMapping, 
@@ -34,9 +35,20 @@ import {
   fetchProductMappings
 } from '@/lib/api/database';
 import { cn } from '@/lib/utils';
+import { calculateSimilarity, findSimilarMatches, getSimilarityColor, type SimilarMatch } from '@/lib/utils/similarity';
 
 interface VendorProduct {
   id: string;
+  vendor_code: string;
+  vendor_desc: string;
+  customer_code?: string;
+  customer_desc?: string;
+}
+
+interface ProductMapping {
+  id: string;
+  customer_code: string;
+  customer_desc: string;
   vendor_code: string;
   vendor_desc: string;
 }
@@ -286,6 +298,7 @@ export function QuickProductMappingDialog({ customerCode, customerDesc, unit, on
   const [vendorDesc, setVendorDesc] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [vendorProducts, setVendorProducts] = useState<VendorProduct[]>([]);
+  const [allMappings, setAllMappings] = useState<ProductMapping[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
   // Load existing vendor products for autocomplete
@@ -295,6 +308,15 @@ export function QuickProductMappingDialog({ customerCode, customerDesc, unit, on
     setLoadingProducts(true);
     try {
       const mappings = await fetchProductMappings();
+      // Store all mappings for similarity matching
+      setAllMappings((mappings || []).map((m: any) => ({
+        id: m.id,
+        customer_code: m.customer_code || '',
+        customer_desc: m.customer_desc || '',
+        vendor_code: m.vendor_code || '',
+        vendor_desc: m.vendor_desc || '',
+      })));
+
       // Get unique vendor products
       const uniqueProducts = new Map<string, VendorProduct>();
       (mappings || []).forEach((m: any) => {
@@ -303,6 +325,8 @@ export function QuickProductMappingDialog({ customerCode, customerDesc, unit, on
             id: m.id,
             vendor_code: m.vendor_code,
             vendor_desc: m.vendor_desc || '',
+            customer_code: m.customer_code,
+            customer_desc: m.customer_desc,
           });
         }
       });
@@ -321,10 +345,43 @@ export function QuickProductMappingDialog({ customerCode, customerDesc, unit, on
     }
   }, [open, loadVendorProducts]);
 
+  // Find similar mappings based on customer code
+  const similarMappings = useMemo(() => {
+    if (!customerCode || allMappings.length === 0) return [];
+    
+    const matches = findSimilarMatches<ProductMapping>(
+      customerCode,
+      allMappings,
+      (m) => m.customer_code,
+      60 // minimum 60% similarity
+    );
+    
+    return matches.slice(0, 5); // Top 5 matches
+  }, [customerCode, allMappings]);
+
+  // Find similar mappings based on customer description
+  const similarDescMappings = useMemo(() => {
+    if (!customerDesc || allMappings.length === 0) return [];
+    
+    const matches = findSimilarMatches<ProductMapping>(
+      customerDesc,
+      allMappings,
+      (m) => m.customer_desc,
+      50 // minimum 50% similarity
+    );
+    
+    return matches.slice(0, 3); // Top 3 matches
+  }, [customerDesc, allMappings]);
+
   const handleSelectProduct = (product: VendorProduct) => {
     setVendorCode(product.vendor_code);
     setVendorDesc(product.vendor_desc);
     setSearchOpen(false);
+  };
+
+  const handleSelectSimilarMapping = (mapping: ProductMapping) => {
+    setVendorCode(mapping.vendor_code);
+    setVendorDesc(mapping.vendor_desc);
   };
 
   const handleSubmit = async () => {
@@ -386,7 +443,7 @@ export function QuickProductMappingDialog({ customerCode, customerDesc, unit, on
             เพิ่ม mapping สำหรับ "{customerCode}"
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
           <div className="space-y-2">
             <Label>รหัสสินค้าลูกค้า</Label>
             <Input value={customerCode} disabled className="bg-muted" />
@@ -395,6 +452,73 @@ export function QuickProductMappingDialog({ customerCode, customerDesc, unit, on
             <Label>รายละเอียดสินค้าลูกค้า</Label>
             <Input value={customerDesc} disabled className="bg-muted" />
           </div>
+
+          {/* Similar Mappings Suggestions */}
+          {(similarMappings.length > 0 || similarDescMappings.length > 0) && (
+            <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Sparkles className="w-4 h-4 text-yellow-500" />
+                <span>Mapping ที่คล้ายกัน (แนะนำ)</span>
+              </div>
+              
+              {similarMappings.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">จากรหัสสินค้า:</p>
+                  {similarMappings.map((match) => (
+                    <div
+                      key={match.item.id}
+                      className="flex items-center justify-between p-2 bg-background rounded border cursor-pointer hover:bg-accent transition-colors"
+                      onClick={() => handleSelectSimilarMapping(match.item)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono">{match.item.customer_code}</span>
+                          <span className="text-muted-foreground">→</span>
+                          <span className="text-xs font-medium">{match.item.vendor_code}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {match.item.vendor_desc}
+                        </p>
+                      </div>
+                      <Badge 
+                        variant={match.similarity >= 90 ? 'default' : match.similarity >= 70 ? 'secondary' : 'outline'}
+                        className={cn("ml-2 shrink-0", getSimilarityColor(match.similarity))}
+                      >
+                        {match.similarity}%
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {similarDescMappings.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">จากรายละเอียด:</p>
+                  {similarDescMappings.map((match) => (
+                    <div
+                      key={`desc-${match.item.id}`}
+                      className="flex items-center justify-between p-2 bg-background rounded border cursor-pointer hover:bg-accent transition-colors"
+                      onClick={() => handleSelectSimilarMapping(match.item)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs truncate">{match.item.customer_desc}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground">→</span>
+                          <span className="text-xs font-medium">{match.item.vendor_code}</span>
+                        </div>
+                      </div>
+                      <Badge 
+                        variant={match.similarity >= 90 ? 'default' : match.similarity >= 70 ? 'secondary' : 'outline'}
+                        className={cn("ml-2 shrink-0", getSimilarityColor(match.similarity))}
+                      >
+                        {match.similarity}%
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           
           {/* Vendor Product Search */}
           <div className="space-y-2">
