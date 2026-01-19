@@ -142,6 +142,44 @@ export type Database = {
         }
         Relationships: []
       }
+      po_edit_history: {
+        Row: {
+          created_at: string
+          edited_by: string | null
+          field_name: string
+          id: string
+          new_value: string
+          old_value: string
+          po_id: string
+        }
+        Insert: {
+          created_at?: string
+          edited_by?: string | null
+          field_name: string
+          id?: string
+          new_value: string
+          old_value: string
+          po_id: string
+        }
+        Update: {
+          created_at?: string
+          edited_by?: string | null
+          field_name?: string
+          id?: string
+          new_value?: string
+          old_value?: string
+          po_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "po_edit_history_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "po_headers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       po_headers: {
         Row: {
           branch: string

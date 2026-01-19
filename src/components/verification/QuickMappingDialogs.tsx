@@ -944,6 +944,14 @@ export function EditCustomerNameDialog({ poId, currentCustomerName, onSuccess }:
 
       if (error) throw error;
 
+      // Save edit history
+      await supabase.from('po_edit_history').insert({
+        po_id: poId,
+        field_name: 'customer_name',
+        old_value: currentCustomerName,
+        new_value: customerName.trim(),
+      });
+
       toast({
         title: 'แก้ไขชื่อลูกค้าสำเร็จ',
         description: `เปลี่ยนจาก "${currentCustomerName}" เป็น "${customerName}"`,
@@ -1148,6 +1156,14 @@ export function EditBranchNameDialog({ poId, currentBranch, onSuccess }: EditBra
         .eq('id', poId);
 
       if (error) throw error;
+
+      // Save edit history
+      await supabase.from('po_edit_history').insert({
+        po_id: poId,
+        field_name: 'branch',
+        old_value: currentBranch,
+        new_value: branchName.trim(),
+      });
 
       toast({
         title: 'แก้ไขชื่อสาขาสำเร็จ',
