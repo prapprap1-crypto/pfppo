@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { POHeader } from '@/types/po';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar, Download, FileSpreadsheet, Filter, CheckCircle2 } from 'lucide-react';
+import { Calendar, FileSpreadsheet, Filter, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchPOItems } from '@/lib/api/database';
+import { generateC303Excel } from '@/lib/utils/excel';
 
 interface ExportPanelProps {
   poList: POHeader[];
@@ -64,6 +66,45 @@ export function ExportPanel({ poList }: ExportPanelProps) {
     }
 
     try {
+      // Fetch all items for selected POs
+      const allItems: Array<{
+        po_number: string;
+        due_date: string;
+        branch: string;
+        supplier_code: string;
+        vendor_product_code: string;
+        vendor_description: string;
+        quantity: number;
+        unit: string;
+        unit_price: number;
+        amount: number;
+      }> = [];
+
+      for (const poId of selectedPOs) {
+        const po = filteredPOs.find(p => p.id === poId);
+        if (!po) continue;
+        
+        const items = await fetchPOItems(poId);
+        for (const item of items) {
+          allItems.push({
+            po_number: po.poNumber,
+            due_date: po.dueDate,
+            branch: po.branch,
+            supplier_code: po.supplierCode,
+            vendor_product_code: item.vendor_product_code || '',
+            vendor_description: item.vendor_description || '',
+            quantity: item.quantity,
+            unit: item.unit || 'ลัง',
+            unit_price: item.unit_price,
+            amount: item.amount,
+          });
+        }
+      }
+
+      // Generate Excel file
+      const fileName = `C303_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      generateC303Excel(allItems, fileName);
+
       // Update status to EXPORTED for all selected POs
       const { error } = await supabase
         .from('po_headers')
@@ -76,7 +117,6 @@ export function ExportPanel({ poList }: ExportPanelProps) {
       const { data: { user } } = await supabase.auth.getUser();
       
       // Save export history
-      const fileName = `C303_${new Date().toISOString().slice(0, 10)}.xls`;
       await supabase.from('export_history').insert({
         user_id: user?.id,
         exported_pos: selectedPOs,
