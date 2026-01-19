@@ -229,6 +229,8 @@ export type Database = {
           updated_at: string
           user_id: string | null
           vat: number | null
+          vendor_branch_code: string | null
+          vendor_branch_name: string | null
           vendor_customer_code: string | null
           vendor_customer_name: string | null
         }
@@ -250,6 +252,8 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           vat?: number | null
+          vendor_branch_code?: string | null
+          vendor_branch_name?: string | null
           vendor_customer_code?: string | null
           vendor_customer_name?: string | null
         }
@@ -271,6 +275,8 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           vat?: number | null
+          vendor_branch_code?: string | null
+          vendor_branch_name?: string | null
           vendor_customer_code?: string | null
           vendor_customer_name?: string | null
         }
