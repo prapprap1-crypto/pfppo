@@ -50,6 +50,10 @@ const Verification = () => {
           sourceFile: poData.source_file || undefined,
           createdAt: poData.created_at,
           updatedAt: poData.updated_at,
+          customerName: poData.customer_name || undefined,
+          vendorCustomerCode: poData.vendor_customer_code || undefined,
+          vendorCustomerName: poData.vendor_customer_name || undefined,
+          isCustomerMapped: poData.is_customer_mapped || false,
         };
         setPo(mappedPO);
 

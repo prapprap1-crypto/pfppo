@@ -446,10 +446,10 @@ export async function autoCreateCustomerMapping(customerName: string) {
 // Refresh customer mapping for a PO
 export async function refreshPOCustomerMapping(poId: string) {
   const poHeader = await fetchPOHeaderById(poId);
-  if (!poHeader || !poHeader.customer_name) return { updated: false };
+  if (!poHeader || !poHeader.customer_name) return { updated: false, vendorCustomerName: '' };
 
   const mapping = await findCustomerMappingByName(poHeader.customer_name);
-  if (!mapping) return { updated: false };
+  if (!mapping) return { updated: false, vendorCustomerName: '' };
 
   const newVendorCode = mapping.vendor_customer_code || '';
   const newVendorName = mapping.vendor_customer_name || '';
@@ -465,10 +465,10 @@ export async function refreshPOCustomerMapping(poId: string) {
       vendor_customer_name: newVendorName,
       is_customer_mapped: newIsMapped
     });
-    return { updated: true };
+    return { updated: true, vendorCustomerName: newVendorName };
   }
 
-  return { updated: false };
+  return { updated: false, vendorCustomerName: newVendorName };
 }
 
 // Export History
