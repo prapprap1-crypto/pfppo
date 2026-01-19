@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { POHeader } from '@/types/po';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,8 @@ import { Calendar, FileSpreadsheet, Filter, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchPOItems } from '@/lib/api/database';
-import { generateC303Excel } from '@/lib/utils/excel';
+import { generateC303Excel, ExportColumn } from '@/lib/utils/excel';
+import { ExportColumnSelector, DEFAULT_COLUMNS } from './ExportColumnSelector';
 
 interface ExportPanelProps {
   poList: POHeader[];
@@ -27,6 +28,7 @@ export function ExportPanel({ poList }: ExportPanelProps) {
   const [dateTo, setDateTo] = useState('');
   const [branch, setBranch] = useState('all');
   const [selectedPOs, setSelectedPOs] = useState<string[]>([]);
+  const [exportColumns, setExportColumns] = useState<ExportColumn[]>(DEFAULT_COLUMNS);
 
   const verifiedPOs = poList.filter(po => po.status === 'VERIFIED');
   
@@ -101,9 +103,9 @@ export function ExportPanel({ poList }: ExportPanelProps) {
         }
       }
 
-      // Generate Excel file
+      // Generate Excel file with selected columns
       const fileName = `C303_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      generateC303Excel(allItems, fileName);
+      generateC303Excel(allItems, fileName, exportColumns);
 
       // Update status to EXPORTED for all selected POs
       const { error } = await supabase
@@ -125,7 +127,7 @@ export function ExportPanel({ poList }: ExportPanelProps) {
 
       toast({
         title: "ส่งออกสำเร็จ",
-        description: `ส่งออก ${selectedPOs.length} รายการเป็น ${fileName} และอัพเดทสถานะเป็น "ส่งออกแล้ว"`,
+        description: `ส่งออก ${selectedPOs.length} รายการเป็น ${fileName} (${exportColumns.filter(c => c.enabled).length} คอลัมน์)`,
       });
 
       // Clear selection
@@ -159,9 +161,15 @@ export function ExportPanel({ poList }: ExportPanelProps) {
     <div className="space-y-6">
       {/* Filters */}
       <div className="bg-card rounded-xl border p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold">ตัวกรองการส่งออก</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Filter className="w-5 h-5 text-primary" />
+            <h3 className="font-semibold">ตัวกรองการส่งออก</h3>
+          </div>
+          <ExportColumnSelector 
+            columns={exportColumns} 
+            onColumnsChange={setExportColumns} 
+          />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
@@ -268,14 +276,6 @@ export function ExportPanel({ poList }: ExportPanelProps) {
               </div>
             ))
           )}
-        </div>
-      </div>
-
-      {/* Export History */}
-      <div className="bg-card rounded-xl border p-6">
-        <h3 className="font-semibold mb-4">ประวัติการส่งออก</h3>
-        <div className="text-center py-8 text-muted-foreground">
-          <p>ยังไม่มีประวัติการส่งออก</p>
         </div>
       </div>
     </div>
