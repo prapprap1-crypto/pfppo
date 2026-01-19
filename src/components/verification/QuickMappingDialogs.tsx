@@ -32,7 +32,9 @@ import {
   createCustomerBranchMapping, 
   createProductMapping,
   findCustomerMappingByName,
-  fetchProductMappings
+  fetchProductMappings,
+  fetchCustomerMappings,
+  fetchAllCustomerBranchMappings
 } from '@/lib/api/database';
 import { cn } from '@/lib/utils';
 import { calculateSimilarity, findSimilarMatches, getSimilarityColor, type SimilarMatch } from '@/lib/utils/similarity';
@@ -53,6 +55,13 @@ interface ProductMapping {
   vendor_desc: string;
 }
 
+interface CustomerMapping {
+  id: string;
+  customer_name: string;
+  vendor_customer_code: string;
+  vendor_customer_name: string;
+}
+
 interface QuickCustomerMappingDialogProps {
   customerName: string;
   onSuccess: () => void;
@@ -64,6 +73,53 @@ export function QuickCustomerMappingDialog({ customerName, onSuccess }: QuickCus
   const [loading, setLoading] = useState(false);
   const [vendorCode, setVendorCode] = useState('');
   const [vendorName, setVendorName] = useState('');
+  const [allCustomerMappings, setAllCustomerMappings] = useState<CustomerMapping[]>([]);
+  const [loadingMappings, setLoadingMappings] = useState(false);
+
+  // Load existing customer mappings
+  const loadCustomerMappings = useCallback(async () => {
+    if (allCustomerMappings.length > 0) return;
+    
+    setLoadingMappings(true);
+    try {
+      const mappings = await fetchCustomerMappings();
+      setAllCustomerMappings((mappings || []).map((m: any) => ({
+        id: m.id,
+        customer_name: m.customer_name || '',
+        vendor_customer_code: m.vendor_customer_code || '',
+        vendor_customer_name: m.vendor_customer_name || '',
+      })));
+    } catch (error) {
+      console.error('Error loading customer mappings:', error);
+    } finally {
+      setLoadingMappings(false);
+    }
+  }, [allCustomerMappings.length]);
+
+  useEffect(() => {
+    if (open) {
+      loadCustomerMappings();
+    }
+  }, [open, loadCustomerMappings]);
+
+  // Find similar customer mappings
+  const similarMappings = useMemo(() => {
+    if (!customerName || allCustomerMappings.length === 0) return [];
+    
+    const matches = findSimilarMatches<CustomerMapping>(
+      customerName,
+      allCustomerMappings,
+      (m) => m.customer_name,
+      50
+    );
+    
+    return matches.slice(0, 5);
+  }, [customerName, allCustomerMappings]);
+
+  const handleSelectMapping = (mapping: CustomerMapping) => {
+    setVendorCode(mapping.vendor_customer_code);
+    setVendorName(mapping.vendor_customer_name);
+  };
 
   const handleSubmit = async () => {
     if (!vendorCode || !vendorName) {
@@ -122,11 +178,46 @@ export function QuickCustomerMappingDialog({ customerName, onSuccess }: QuickCus
             เพิ่ม mapping สำหรับ "{customerName}"
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
           <div className="space-y-2">
             <Label>ชื่อลูกค้า (จาก PO)</Label>
             <Input value={customerName} disabled className="bg-muted" />
           </div>
+
+          {/* Similar Customer Mappings Suggestions */}
+          {similarMappings.length > 0 && (
+            <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Sparkles className="w-4 h-4 text-yellow-500" />
+                <span>ลูกค้าที่คล้ายกัน (แนะนำ)</span>
+              </div>
+              <div className="space-y-2">
+                {similarMappings.map((match) => (
+                  <div
+                    key={match.item.id}
+                    className="flex items-center justify-between p-2 bg-background rounded border cursor-pointer hover:bg-accent transition-colors"
+                    onClick={() => handleSelectMapping(match.item)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs truncate">{match.item.customer_name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">→</span>
+                        <span className="text-xs font-medium">{match.item.vendor_customer_code}</span>
+                        <span className="text-xs text-muted-foreground truncate">{match.item.vendor_customer_name}</span>
+                      </div>
+                    </div>
+                    <Badge 
+                      variant={match.similarity >= 90 ? 'default' : match.similarity >= 70 ? 'secondary' : 'outline'}
+                      className={cn("ml-2 shrink-0", getSimilarityColor(match.similarity))}
+                    >
+                      {match.similarity}%
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="vendorCode">รหัสลูกค้า Vendor *</Label>
             <Input
@@ -158,6 +249,14 @@ export function QuickCustomerMappingDialog({ customerName, onSuccess }: QuickCus
   );
 }
 
+interface BranchMapping {
+  id: string;
+  branch: string;
+  vendor_branch_code: string | null;
+  vendor_branch_name: string | null;
+  customer_mapping_id: string;
+}
+
 interface QuickBranchMappingDialogProps {
   customerName: string;
   branch: string;
@@ -170,6 +269,54 @@ export function QuickBranchMappingDialog({ customerName, branch, onSuccess }: Qu
   const [loading, setLoading] = useState(false);
   const [vendorCode, setVendorCode] = useState('');
   const [vendorName, setVendorName] = useState('');
+  const [allBranchMappings, setAllBranchMappings] = useState<BranchMapping[]>([]);
+  const [loadingMappings, setLoadingMappings] = useState(false);
+
+  // Load existing branch mappings
+  const loadBranchMappings = useCallback(async () => {
+    if (allBranchMappings.length > 0) return;
+    
+    setLoadingMappings(true);
+    try {
+      const mappings = await fetchAllCustomerBranchMappings();
+      setAllBranchMappings((mappings || []).map((m: any) => ({
+        id: m.id,
+        branch: m.branch || '',
+        vendor_branch_code: m.vendor_branch_code,
+        vendor_branch_name: m.vendor_branch_name,
+        customer_mapping_id: m.customer_mapping_id,
+      })));
+    } catch (error) {
+      console.error('Error loading branch mappings:', error);
+    } finally {
+      setLoadingMappings(false);
+    }
+  }, [allBranchMappings.length]);
+
+  useEffect(() => {
+    if (open) {
+      loadBranchMappings();
+    }
+  }, [open, loadBranchMappings]);
+
+  // Find similar branch mappings
+  const similarMappings = useMemo(() => {
+    if (!branch || allBranchMappings.length === 0) return [];
+    
+    const matches = findSimilarMatches<BranchMapping>(
+      branch,
+      allBranchMappings.filter(m => m.vendor_branch_code), // Only show mapped branches
+      (m) => m.branch,
+      50
+    );
+    
+    return matches.slice(0, 5);
+  }, [branch, allBranchMappings]);
+
+  const handleSelectMapping = (mapping: BranchMapping) => {
+    setVendorCode(mapping.vendor_branch_code || '');
+    setVendorName(mapping.vendor_branch_name || '');
+  };
 
   const handleSubmit = async () => {
     if (!vendorCode || !vendorName) {
@@ -241,7 +388,7 @@ export function QuickBranchMappingDialog({ customerName, branch, onSuccess }: Qu
             เพิ่ม mapping สำหรับสาขา "{branch}" ของลูกค้า "{customerName}"
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>ชื่อลูกค้า</Label>
@@ -252,6 +399,41 @@ export function QuickBranchMappingDialog({ customerName, branch, onSuccess }: Qu
               <Input value={branch} disabled className="bg-muted" />
             </div>
           </div>
+
+          {/* Similar Branch Mappings Suggestions */}
+          {similarMappings.length > 0 && (
+            <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Sparkles className="w-4 h-4 text-yellow-500" />
+                <span>สาขาที่คล้ายกัน (แนะนำ)</span>
+              </div>
+              <div className="space-y-2">
+                {similarMappings.map((match) => (
+                  <div
+                    key={match.item.id}
+                    className="flex items-center justify-between p-2 bg-background rounded border cursor-pointer hover:bg-accent transition-colors"
+                    onClick={() => handleSelectMapping(match.item)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs truncate">{match.item.branch}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">→</span>
+                        <span className="text-xs font-medium">{match.item.vendor_branch_code}</span>
+                        <span className="text-xs text-muted-foreground truncate">{match.item.vendor_branch_name}</span>
+                      </div>
+                    </div>
+                    <Badge 
+                      variant={match.similarity >= 90 ? 'default' : match.similarity >= 70 ? 'secondary' : 'outline'}
+                      className={cn("ml-2 shrink-0", getSimilarityColor(match.similarity))}
+                    >
+                      {match.similarity}%
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="branchVendorCode">รหัสสาขา Vendor *</Label>
             <Input
