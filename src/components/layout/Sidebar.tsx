@@ -10,7 +10,8 @@ import {
   Users,
   UserCircle,
   Activity,
-  Building2
+  Building2,
+  PieChart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,6 +22,7 @@ const navItems = [
   { path: '/po-list', label: 'รายการ PO', icon: FileText },
   { path: '/mapping', label: 'Mapping สินค้า', icon: Layers },
   { path: '/customer-mapping', label: 'Mapping ลูกค้า', icon: Building2 },
+  { path: '/mapping-dashboard', label: 'สรุป Mapping', icon: PieChart },
   { path: '/verification', label: 'ตรวจสอบเอกสาร', icon: FileCheck },
   { path: '/export', label: 'ส่งออก Excel', icon: Download },
   { path: '/activity-log', label: 'ประวัติการใช้งาน', icon: Activity },
