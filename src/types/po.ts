@@ -85,8 +85,8 @@ export const STATUS_LABELS: Record<POStatus, string> = {
   NEW: 'พบไฟล์ใหม่',
   IMPORTED: 'นำเข้าสำเร็จ',
   NEED_REVIEW: 'รอตรวจสอบ',
-  VERIFIED: 'ตรวจสอบสำเร็จ',
-  EXPORTED: 'นำออกเรียบร้อย',
+  VERIFIED: 'ตรวจสอบแล้ว/รอส่งออก',
+  EXPORTED: 'ส่งออกแล้ว',
   ERROR: 'วิเคราะห์ไม่สำเร็จ',
 };
 

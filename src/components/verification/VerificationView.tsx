@@ -41,7 +41,7 @@ const STATUS_LABELS: Record<POHeader['status'], string> = {
   NEW: 'ใหม่',
   IMPORTED: 'นำเข้าแล้ว',
   NEED_REVIEW: 'รอตรวจสอบ',
-  VERIFIED: 'ตรวจสอบแล้ว',
+  VERIFIED: 'ตรวจสอบแล้ว/รอส่งออก',
   EXPORTED: 'ส่งออกแล้ว',
   ERROR: 'ผิดพลาด',
 };
@@ -109,12 +109,24 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
     return editedItems[item.id]?.[field] ?? item[field];
   };
 
-  const handleVerify = () => {
-    toast({
-      title: "ยืนยันเอกสารสำเร็จ",
-      description: `เอกสาร ${po.poNumber} ได้รับการยืนยันแล้ว`,
-    });
-    onVerify?.();
+  const handleVerify = async () => {
+    try {
+      // Update status to VERIFIED in database
+      await updatePOHeader(po.id, { status: 'VERIFIED' });
+      
+      toast({
+        title: "ยืนยันเอกสารสำเร็จ",
+        description: `เอกสาร ${po.poNumber} พร้อมส่งออกแล้ว`,
+      });
+      onVerify?.();
+    } catch (error) {
+      console.error('Error verifying PO:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถยืนยันเอกสารได้",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleReject = () => {
