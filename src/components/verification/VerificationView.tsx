@@ -25,7 +25,8 @@ import {
   QuickCustomerMappingDialog, 
   QuickBranchMappingDialog, 
   QuickProductMappingDialog,
-  EditCustomerNameDialog
+  EditCustomerNameDialog,
+  EditBranchNameDialog
 } from './QuickMappingDialogs';
 
 interface VerificationViewProps {
@@ -369,6 +370,21 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">สาขา:</span>
                   <span className="font-medium">{localPO.branch || '-'}</span>
+                  {localPO.branch && (
+                    <EditBranchNameDialog
+                      poId={po.id}
+                      currentBranch={localPO.branch}
+                      onSuccess={(newBranch) => {
+                        setLocalPO({
+                          ...localPO,
+                          branch: newBranch,
+                          isBranchMapped: false,
+                          vendorBranchCode: undefined,
+                          vendorBranchName: undefined,
+                        });
+                      }}
+                    />
+                  )}
                   {localPO.isBranchMapped ? (
                     <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-200 gap-1">
                       <CheckCircle2 className="w-3 h-3" />

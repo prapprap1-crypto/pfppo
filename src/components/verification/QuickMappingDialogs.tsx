@@ -1045,3 +1045,208 @@ export function EditCustomerNameDialog({ poId, currentCustomerName, onSuccess }:
     </Dialog>
   );
 }
+
+// ===== EditBranchNameDialog =====
+interface EditBranchNameDialogProps {
+  poId: string;
+  currentBranch: string;
+  onSuccess: (newBranch: string) => void;
+}
+
+export function EditBranchNameDialog({ poId, currentBranch, onSuccess }: EditBranchNameDialogProps) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [branchName, setBranchName] = useState(currentBranch);
+  const [allBranchMappings, setAllBranchMappings] = useState<BranchMapping[]>([]);
+  const [loadingMappings, setLoadingMappings] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setBranchName(currentBranch);
+    }
+  }, [open, currentBranch]);
+
+  // Load existing branch mappings
+  const loadBranchMappings = useCallback(async () => {
+    if (allBranchMappings.length > 0) return;
+    
+    setLoadingMappings(true);
+    try {
+      const mappings = await fetchAllCustomerBranchMappings();
+      setAllBranchMappings((mappings || []).map((m: any) => ({
+        id: m.id,
+        branch: m.branch || '',
+        vendor_branch_code: m.vendor_branch_code,
+        vendor_branch_name: m.vendor_branch_name,
+        customer_mapping_id: m.customer_mapping_id,
+      })));
+    } catch (error) {
+      console.error('Error loading branch mappings:', error);
+    } finally {
+      setLoadingMappings(false);
+    }
+  }, [allBranchMappings.length]);
+
+  useEffect(() => {
+    if (open) {
+      loadBranchMappings();
+    }
+  }, [open, loadBranchMappings]);
+
+  // Find similar branch mappings
+  const similarMappings = useMemo(() => {
+    if (!branchName || allBranchMappings.length === 0) return [];
+    
+    // Get unique branches with mappings
+    const uniqueBranches = new Map<string, BranchMapping>();
+    allBranchMappings
+      .filter(m => m.vendor_branch_code)
+      .forEach(m => {
+        if (!uniqueBranches.has(m.branch)) {
+          uniqueBranches.set(m.branch, m);
+        }
+      });
+    
+    const matches = findSimilarMatches<BranchMapping>(
+      branchName,
+      Array.from(uniqueBranches.values()),
+      (m) => m.branch,
+      60
+    );
+    
+    return matches.slice(0, 5);
+  }, [branchName, allBranchMappings]);
+
+  const handleSelectSuggestion = (mapping: BranchMapping) => {
+    setBranchName(mapping.branch);
+  };
+
+  const handleSubmit = async () => {
+    if (!branchName.trim()) {
+      toast({
+        title: 'กรุณากรอกชื่อสาขา',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (branchName === currentBranch) {
+      setOpen(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { error } = await supabase
+        .from('po_headers')
+        .update({ 
+          branch: branchName.trim(),
+        })
+        .eq('id', poId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'แก้ไขชื่อสาขาสำเร็จ',
+        description: `เปลี่ยนจาก "${currentBranch}" เป็น "${branchName}"`,
+      });
+
+      setOpen(false);
+      onSuccess(branchName.trim());
+    } catch (error) {
+      console.error('Error updating branch name:', error);
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถแก้ไขชื่อสาขาได้',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1 hover:bg-primary/10" title="แก้ไขชื่อสาขา">
+          <Pencil className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="w-5 h-5" />
+            แก้ไขชื่อสาขา
+          </DialogTitle>
+          <DialogDescription>
+            แก้ไขชื่อสาขาที่ AI อ่านมาผิด เพื่อให้สามารถจับคู่ Mapping ได้ถูกต้อง
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-2">
+            <Label>ชื่อสาขาปัจจุบัน (จาก AI)</Label>
+            <Input value={currentBranch} disabled className="bg-muted text-muted-foreground" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="newBranchName">ชื่อสาขาที่ถูกต้อง *</Label>
+            <Input
+              id="newBranchName"
+              value={branchName}
+              onChange={(e) => setBranchName(e.target.value)}
+              placeholder="กรอกชื่อสาขาที่ถูกต้อง"
+              className="border-primary/50"
+            />
+          </div>
+
+          {/* Similar Branch Names Suggestions */}
+          {similarMappings.length > 0 && (
+            <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Sparkles className="w-4 h-4 text-yellow-500" />
+                <span>ชื่อสาขาที่ใกล้เคียง (แนะนำ)</span>
+              </div>
+              <div className="space-y-2">
+                {similarMappings.map((match) => (
+                  <div
+                    key={match.item.id}
+                    className="flex items-center justify-between p-2 bg-background rounded border cursor-pointer hover:bg-accent transition-colors"
+                    onClick={() => handleSelectSuggestion(match.item)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate font-medium">{match.item.branch}</p>
+                      {match.item.vendor_branch_code && (
+                        <p className="text-xs text-muted-foreground">
+                          รหัส: {match.item.vendor_branch_code} | {match.item.vendor_branch_name}
+                        </p>
+                      )}
+                    </div>
+                    <Badge 
+                      variant={match.similarity >= 90 ? 'default' : match.similarity >= 70 ? 'secondary' : 'outline'}
+                      className={cn("ml-2 shrink-0", getSimilarityColor(match.similarity))}
+                    >
+                      {match.similarity}%
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                คลิกเพื่อใช้ชื่อที่แนะนำ
+              </p>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>ยกเลิก</Button>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            บันทึก
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
