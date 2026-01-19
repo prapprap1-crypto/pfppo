@@ -47,6 +47,47 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_branch_mappings: {
+        Row: {
+          active: boolean | null
+          branch: string
+          created_at: string
+          customer_mapping_id: string
+          id: string
+          updated_at: string
+          vendor_branch_code: string | null
+          vendor_branch_name: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          branch: string
+          created_at?: string
+          customer_mapping_id: string
+          id?: string
+          updated_at?: string
+          vendor_branch_code?: string | null
+          vendor_branch_name?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          branch?: string
+          created_at?: string
+          customer_mapping_id?: string
+          id?: string
+          updated_at?: string
+          vendor_branch_code?: string | null
+          vendor_branch_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_branch_mappings_customer_mapping_id_fkey"
+            columns: ["customer_mapping_id"]
+            isOneToOne: false
+            referencedRelation: "customer_mappings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_mappings: {
         Row: {
           active: boolean | null

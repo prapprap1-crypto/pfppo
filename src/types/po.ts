@@ -54,6 +54,17 @@ export interface CustomerMapping {
   vendorCustomerName: string;
   active: boolean;
   createdAt: string;
+  branches?: CustomerBranchMapping[];
+}
+
+export interface CustomerBranchMapping {
+  id: string;
+  customerMappingId: string;
+  branch: string;
+  vendorBranchCode: string;
+  vendorBranchName: string;
+  active: boolean;
+  createdAt: string;
 }
 
 export interface DashboardStats {
