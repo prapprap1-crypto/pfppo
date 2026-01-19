@@ -34,7 +34,9 @@ import {
   findCustomerMappingByName,
   fetchProductMappings,
   fetchCustomerMappings,
-  fetchAllCustomerBranchMappings
+  fetchAllCustomerBranchMappings,
+  updateCustomerMapping,
+  updateCustomerBranchMapping
 } from '@/lib/api/database';
 import { cn } from '@/lib/utils';
 import { calculateSimilarity, findSimilarMatches, getSimilarityColor, type SimilarMatch } from '@/lib/utils/similarity';
@@ -132,27 +134,47 @@ export function QuickCustomerMappingDialog({ customerName, onSuccess }: QuickCus
 
     setLoading(true);
     try {
-      await createCustomerMapping({
-        customer_name: customerName,
-        vendor_customer_code: vendorCode,
-        vendor_customer_name: vendorName,
-        active: true,
-      });
+      // Check if mapping already exists
+      const existingMapping = await findCustomerMappingByName(customerName);
+      
+      if (existingMapping) {
+        // Update existing mapping
+        await updateCustomerMapping(existingMapping.id, {
+          vendor_customer_code: vendorCode,
+          vendor_customer_name: vendorName,
+        });
+        
+        toast({
+          title: 'อัพเดท Mapping ลูกค้าสำเร็จ',
+          description: `${customerName} → ${vendorName}`,
+        });
+      } else {
+        // Create new mapping
+        await createCustomerMapping({
+          customer_name: customerName,
+          vendor_customer_code: vendorCode,
+          vendor_customer_name: vendorName,
+          active: true,
+        });
 
-      toast({
-        title: 'เพิ่ม Mapping ลูกค้าสำเร็จ',
-        description: `${customerName} → ${vendorName}`,
-      });
+        toast({
+          title: 'เพิ่ม Mapping ลูกค้าสำเร็จ',
+          description: `${customerName} → ${vendorName}`,
+        });
+      }
 
       setOpen(false);
       setVendorCode('');
       setVendorName('');
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating customer mapping:', error);
+      const errorMessage = error?.message?.includes('duplicate') 
+        ? 'ลูกค้านี้มี mapping อยู่แล้ว' 
+        : 'ไม่สามารถสร้าง mapping ได้';
       toast({
         title: 'เกิดข้อผิดพลาด',
-        description: 'ไม่สามารถสร้าง mapping ได้',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
