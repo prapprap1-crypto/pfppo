@@ -20,6 +20,11 @@ import { POHeader, POItem } from '@/types/po';
 import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping } from '@/lib/api/database';
 import { supabase } from '@/integrations/supabase/client';
 import { PdfViewer } from './PdfViewer';
+import { 
+  QuickCustomerMappingDialog, 
+  QuickBranchMappingDialog, 
+  QuickProductMappingDialog 
+} from './QuickMappingDialogs';
 
 interface VerificationViewProps {
   po: POHeader;
@@ -308,16 +313,24 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                 )}
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefreshCustomerMapping}
-              disabled={isRefreshingCustomer}
-              className="gap-2"
-            >
-              <RefreshCw className={cn("w-4 h-4", isRefreshingCustomer && "animate-spin")} />
-              อัปเดต Mapping ลูกค้า
-            </Button>
+            <div className="flex items-center gap-2">
+              {!localPO.isCustomerMapped && localPO.customerName && (
+                <QuickCustomerMappingDialog 
+                  customerName={localPO.customerName} 
+                  onSuccess={handleRefreshCustomerMapping} 
+                />
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshCustomerMapping}
+                disabled={isRefreshingCustomer}
+                className="gap-2"
+              >
+                <RefreshCw className={cn("w-4 h-4", isRefreshingCustomer && "animate-spin")} />
+                อัปเดต
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -353,16 +366,25 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                 )}
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefreshBranchMapping}
-              disabled={isRefreshingBranch}
-              className="gap-2"
-            >
-              <RefreshCw className={cn("w-4 h-4", isRefreshingBranch && "animate-spin")} />
-              อัปเดต Mapping สาขา
-            </Button>
+            <div className="flex items-center gap-2">
+              {!localPO.isBranchMapped && localPO.branch && localPO.isCustomerMapped && (
+                <QuickBranchMappingDialog 
+                  customerName={localPO.customerName || ''} 
+                  branch={localPO.branch}
+                  onSuccess={handleRefreshBranchMapping} 
+                />
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshBranchMapping}
+                disabled={isRefreshingBranch}
+                className="gap-2"
+              >
+                <RefreshCw className={cn("w-4 h-4", isRefreshingBranch && "animate-spin")} />
+                อัปเดต
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -484,7 +506,15 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                       {item.isMapped ? (
                         <CheckCircle2 className="w-5 h-5 text-green-500" />
                       ) : (
-                        <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                        <div className="flex items-center gap-1">
+                          <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                          <QuickProductMappingDialog 
+                            customerCode={item.customerProductCode}
+                            customerDesc={item.customerDescription}
+                            unit={item.unit}
+                            onSuccess={handleRefreshMapping}
+                          />
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
