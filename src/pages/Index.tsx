@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { RecentPOList } from '@/components/dashboard/RecentPOList';
@@ -11,9 +12,18 @@ import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [poHeaders, setPOHeaders] = useState(mockPOHeaders);
   const [stats, setStats] = useState(mockDashboardStats);
   const [loading, setLoading] = useState(true);
+
+  const handleUploadComplete = () => {
+    loadData();
+    // Navigate to PO list after successful upload
+    setTimeout(() => {
+      navigate('/po-list');
+    }, 1500);
+  };
 
   const loadData = async () => {
     try {
@@ -96,7 +106,7 @@ const Index = () => {
             <StatusChart stats={stats} />
             <div className="bg-card rounded-xl border p-5">
               <h3 className="font-semibold mb-4">นำเข้า PO ใหม่</h3>
-              <FileUploadZone maxFiles={5} onUploadComplete={loadData} />
+              <FileUploadZone maxFiles={5} onUploadComplete={handleUploadComplete} />
             </div>
           </div>
         </div>
