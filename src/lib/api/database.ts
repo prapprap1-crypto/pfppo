@@ -80,6 +80,9 @@ export async function updatePOHeader(id: string, updates: Partial<{
   vendor_customer_code: string;
   vendor_customer_name: string;
   is_customer_mapped: boolean;
+  branch: string;
+  vendor_branch_code: string | null;
+  vendor_branch_name: string | null;
 }>) {
   const { data, error } = await supabase
     .from('po_headers')
