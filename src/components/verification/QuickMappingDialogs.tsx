@@ -1102,9 +1102,9 @@ export function EditBranchNameDialog({ poId, currentBranch, onSuccess }: EditBra
     }
   }, [open, loadBranchMappings]);
 
-  // Find similar branch mappings
+  // Find similar branch mappings - compare with original AI-extracted branch (currentBranch)
   const similarMappings = useMemo(() => {
-    if (!branchName || allBranchMappings.length === 0) return [];
+    if (!currentBranch || allBranchMappings.length === 0) return [];
     
     // Get unique branches with mappings
     const uniqueBranches = new Map<string, BranchMapping>();
@@ -1117,14 +1117,14 @@ export function EditBranchNameDialog({ poId, currentBranch, onSuccess }: EditBra
       });
     
     const matches = findSimilarMatches<BranchMapping>(
-      branchName,
+      currentBranch, // Always compare with original AI-extracted branch
       Array.from(uniqueBranches.values()),
       (m) => m.branch,
-      60
+      50 // Lower threshold to show more suggestions
     );
     
     return matches.slice(0, 5);
-  }, [branchName, allBranchMappings]);
+  }, [currentBranch, allBranchMappings]);
 
   const handleSelectSuggestion = (mapping: BranchMapping) => {
     setBranchName(mapping.branch);
@@ -1203,57 +1203,91 @@ export function EditBranchNameDialog({ poId, currentBranch, onSuccess }: EditBra
         </DialogHeader>
         <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
           <div className="space-y-2">
-            <Label>ชื่อสาขาปัจจุบัน (จาก AI)</Label>
-            <Input value={currentBranch} disabled className="bg-muted text-muted-foreground" />
+            <Label>ชื่อสาขา (จาก PO)</Label>
+            <Input value={currentBranch} disabled className="bg-muted text-muted-foreground font-medium" />
+            <p className="text-xs text-muted-foreground">ค่าที่ AI วิเคราะห์ได้จากเอกสาร PO</p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="newBranchName">ชื่อสาขาที่ถูกต้อง *</Label>
-            <Input
-              id="newBranchName"
-              value={branchName}
-              onChange={(e) => setBranchName(e.target.value)}
-              placeholder="กรอกชื่อสาขาที่ถูกต้อง"
-              className="border-primary/50"
-            />
-          </div>
-
-          {/* Similar Branch Names Suggestions */}
+          {/* Comparison with existing mappings */}
           {similarMappings.length > 0 && (
-            <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Sparkles className="w-4 h-4 text-yellow-500" />
-                <span>ชื่อสาขาที่ใกล้เคียง (แนะนำ)</span>
+            <div className="space-y-3 p-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
+              <div className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-300">
+                <Sparkles className="w-4 h-4" />
+                <span>เปรียบเทียบกับ Mapping ที่มีอยู่</span>
               </div>
               <div className="space-y-2">
                 {similarMappings.map((match) => (
                   <div
                     key={match.item.id}
-                    className="flex items-center justify-between p-2 bg-background rounded border cursor-pointer hover:bg-accent transition-colors"
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all",
+                      branchName === match.item.branch 
+                        ? "bg-green-100 dark:bg-green-900/30 border-green-500 ring-2 ring-green-500/30" 
+                        : "bg-background hover:bg-accent"
+                    )}
                     onClick={() => handleSelectSuggestion(match.item)}
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm truncate font-medium">{match.item.branch}</p>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm truncate font-medium">{match.item.branch}</p>
+                        {branchName === match.item.branch && (
+                          <Badge variant="default" className="bg-green-600 text-white text-xs">เลือกแล้ว</Badge>
+                        )}
+                      </div>
                       {match.item.vendor_branch_code && (
                         <p className="text-xs text-muted-foreground">
-                          รหัส: {match.item.vendor_branch_code} | {match.item.vendor_branch_name}
+                          รหัสสาขา (ผู้จำหน่าย): <span className="font-medium">{match.item.vendor_branch_code}</span>
+                          <span className="mx-2">|</span>
+                          ชื่อสาขา (ผู้จำหน่าย): <span className="font-medium">{match.item.vendor_branch_name}</span>
                         </p>
                       )}
                     </div>
-                    <Badge 
-                      variant={match.similarity >= 90 ? 'default' : match.similarity >= 70 ? 'secondary' : 'outline'}
-                      className={cn("ml-2 shrink-0", getSimilarityColor(match.similarity))}
-                    >
-                      {match.similarity}%
-                    </Badge>
+                    <div className="ml-3 shrink-0 flex flex-col items-end gap-1">
+                      <Badge 
+                        variant={match.similarity >= 90 ? 'default' : match.similarity >= 70 ? 'secondary' : 'outline'}
+                        className={cn(
+                          match.similarity >= 90 ? 'bg-green-600' : 
+                          match.similarity >= 70 ? 'bg-yellow-500' : 
+                          'bg-orange-500',
+                          'text-white'
+                        )}
+                      >
+                        {match.similarity}% ตรงกัน
+                      </Badge>
+                      {match.similarity === 100 && (
+                        <span className="text-xs text-green-600 font-medium">Exact Match</span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                คลิกเพื่อใช้ชื่อที่แนะนำ
+                คลิกเพื่อเลือกสาขาที่ต้องการใช้ - ระบบจะอัปเดตชื่อสาขาให้ตรงกับ Mapping
               </p>
             </div>
           )}
+
+          {similarMappings.length === 0 && !loadingMappings && (
+            <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200/50 dark:border-yellow-800/50">
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                ไม่พบ Mapping สาขาที่ใกล้เคียง - อาจต้องเพิ่ม Mapping ใหม่ในหน้า Mapping ลูกค้า
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="newBranchName">ชื่อสาขาที่จะใช้ *</Label>
+            <Input
+              id="newBranchName"
+              value={branchName}
+              onChange={(e) => setBranchName(e.target.value)}
+              placeholder="กรอกชื่อสาขาที่ถูกต้อง หรือเลือกจากด้านบน"
+              className="border-primary/50"
+            />
+            <p className="text-xs text-muted-foreground">
+              แก้ไขให้ตรงกับชื่อสาขาใน Mapping เพื่อให้ระบบจับคู่ได้อัตโนมัติ
+            </p>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>ยกเลิก</Button>
