@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { CustomerMappingTable } from '@/components/mapping/CustomerMappingTable';
-import { fetchCustomerMappings, createCustomerMapping, updateCustomerMapping, deleteCustomerMapping } from '@/lib/api/database';
+import { 
+  fetchCustomerMappings, 
+  createCustomerMapping, 
+  updateCustomerMapping, 
+  deleteCustomerMapping,
+  fetchAllCustomerBranchMappings,
+  createCustomerBranchMapping,
+  updateCustomerBranchMapping,
+  deleteCustomerBranchMapping,
+} from '@/lib/api/database';
 import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from '@/hooks/useActivityLog';
-import { CustomerMapping } from '@/types/po';
+import { CustomerMapping, CustomerBranchMapping } from '@/types/po';
 
 const CustomerMappingPage = () => {
   const { toast } = useToast();
@@ -15,15 +24,37 @@ const CustomerMappingPage = () => {
   const loadMappings = async () => {
     try {
       setLoading(true);
-      const data = await fetchCustomerMappings();
-      if (data) {
-        setMappings(data.map((m: any) => ({
+      const [customerData, branchData] = await Promise.all([
+        fetchCustomerMappings(),
+        fetchAllCustomerBranchMappings()
+      ]);
+      
+      if (customerData) {
+        // Map branches to their customers
+        const branchMap = new Map<string, CustomerBranchMapping[]>();
+        (branchData || []).forEach((b: any) => {
+          const mapped: CustomerBranchMapping = {
+            id: b.id,
+            customerMappingId: b.customer_mapping_id,
+            branch: b.branch,
+            vendorBranchCode: b.vendor_branch_code || '',
+            vendorBranchName: b.vendor_branch_name || '',
+            active: b.active ?? true,
+            createdAt: b.created_at,
+          };
+          const existing = branchMap.get(b.customer_mapping_id) || [];
+          existing.push(mapped);
+          branchMap.set(b.customer_mapping_id, existing);
+        });
+
+        setMappings(customerData.map((m: any) => ({
           id: m.id,
           customerName: m.customer_name,
           vendorCustomerCode: m.vendor_customer_code,
           vendorCustomerName: m.vendor_customer_name,
           active: m.active ?? true,
           createdAt: m.created_at,
+          branches: branchMap.get(m.id) || [],
         })));
       }
     } catch (error) {
@@ -107,13 +138,64 @@ const CustomerMappingPage = () => {
     }
   };
 
+  // Branch handlers
+  const handleAddBranch = async (customerMappingId: string, branch: Partial<CustomerBranchMapping>) => {
+    try {
+      await createCustomerBranchMapping({
+        customer_mapping_id: customerMappingId,
+        branch: branch.branch || '',
+        vendor_branch_code: branch.vendorBranchCode || '',
+        vendor_branch_name: branch.vendorBranchName || '',
+        active: branch.active ?? true,
+      });
+      
+      toast({ title: 'เพิ่มสาขาสำเร็จ' });
+      loadMappings();
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        toast({ title: 'สาขานี้มีอยู่แล้วสำหรับลูกค้านี้', variant: 'destructive' });
+      } else {
+        toast({ title: 'เกิดข้อผิดพลาด', variant: 'destructive' });
+      }
+    }
+  };
+
+  const handleEditBranch = async (id: string, branch: Partial<CustomerBranchMapping>) => {
+    try {
+      await updateCustomerBranchMapping(id, {
+        branch: branch.branch,
+        vendor_branch_code: branch.vendorBranchCode,
+        vendor_branch_name: branch.vendorBranchName,
+        active: branch.active,
+      });
+      
+      toast({ title: 'แก้ไขสาขาสำเร็จ' });
+      loadMappings();
+    } catch (error) {
+      toast({ title: 'เกิดข้อผิดพลาด', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteBranch = async (id: string) => {
+    try {
+      await deleteCustomerBranchMapping(id);
+      toast({ title: 'ลบสาขาสำเร็จ' });
+      loadMappings();
+    } catch (error) {
+      toast({ title: 'เกิดข้อผิดพลาด', variant: 'destructive' });
+    }
+  };
+
   return (
-    <MainLayout title="Mapping ลูกค้า" subtitle="จับคู่ชื่อลูกค้าจาก PO กับรหัส/ชื่อลูกค้าของผู้จำหน่าย">
+    <MainLayout title="Mapping ลูกค้า" subtitle="จับคู่ชื่อลูกค้าและสาขาจาก PO กับรหัส/ชื่อของผู้จำหน่าย">
       <CustomerMappingTable 
         mappings={mappings} 
         onAdd={handleAdd}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onAddBranch={handleAddBranch}
+        onEditBranch={handleEditBranch}
+        onDeleteBranch={handleDeleteBranch}
       />
     </MainLayout>
   );

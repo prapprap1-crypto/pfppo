@@ -471,6 +471,121 @@ export async function refreshPOCustomerMapping(poId: string) {
   return { updated: false, vendorCustomerName: newVendorName };
 }
 
+// Customer Branch Mappings
+export async function fetchCustomerBranchMappings(customerMappingId: string) {
+  const { data, error } = await supabase
+    .from('customer_branch_mappings')
+    .select('*')
+    .eq('customer_mapping_id', customerMappingId)
+    .order('branch', { ascending: true });
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchAllCustomerBranchMappings() {
+  const { data, error } = await supabase
+    .from('customer_branch_mappings')
+    .select('*')
+    .order('branch', { ascending: true });
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function createCustomerBranchMapping(mapping: {
+  customer_mapping_id: string;
+  branch: string;
+  vendor_branch_code?: string;
+  vendor_branch_name?: string;
+  active?: boolean;
+}) {
+  const { data, error } = await supabase
+    .from('customer_branch_mappings')
+    .insert(mapping)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function updateCustomerBranchMapping(id: string, updates: Partial<{
+  branch: string;
+  vendor_branch_code: string;
+  vendor_branch_name: string;
+  active: boolean;
+}>) {
+  const { data, error } = await supabase
+    .from('customer_branch_mappings')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCustomerBranchMapping(id: string) {
+  const { error } = await supabase
+    .from('customer_branch_mappings')
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
+}
+
+export async function findBranchMapping(customerName: string, branch: string) {
+  // First find the customer mapping
+  const customerMapping = await findCustomerMappingByName(customerName);
+  if (!customerMapping) return null;
+
+  // Then find the branch mapping
+  const { data, error } = await supabase
+    .from('customer_branch_mappings')
+    .select('*')
+    .eq('customer_mapping_id', customerMapping.id)
+    .eq('branch', branch)
+    .eq('active', true)
+    .maybeSingle();
+  
+  if (error) throw error;
+  return data ? { customerMapping, branchMapping: data } : { customerMapping, branchMapping: null };
+}
+
+export async function autoCreateBranchMapping(customerMappingId: string, branch: string) {
+  if (!branch) return null;
+  
+  // Check if already exists
+  const { data: existing } = await supabase
+    .from('customer_branch_mappings')
+    .select('id')
+    .eq('customer_mapping_id', customerMappingId)
+    .eq('branch', branch)
+    .maybeSingle();
+  
+  if (existing) return null;
+  
+  const { data, error } = await supabase
+    .from('customer_branch_mappings')
+    .insert({
+      customer_mapping_id: customerMappingId,
+      branch: branch,
+      vendor_branch_code: '',
+      vendor_branch_name: '',
+      active: true
+    })
+    .select()
+    .single();
+  
+  if (error) {
+    if (error.code === '23505') return null; // Duplicate
+    throw error;
+  }
+  return data;
+}
+
 // Export History
 export async function createExportHistory(exportData: {
   exported_pos: string[];
