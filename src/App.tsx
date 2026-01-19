@@ -12,6 +12,7 @@ import MappingDashboard from "./pages/MappingDashboard";
 import PendingVerification from "./pages/PendingVerification";
 import Verification from "./pages/Verification";
 import Export from "./pages/Export";
+import ExportHistory from "./pages/ExportHistory";
 import Users from "./pages/Users";
 import Profile from "./pages/Profile";
 import ActivityLog from "./pages/ActivityLog";
@@ -53,6 +54,7 @@ function AppRoutes() {
       <Route path="/verification" element={<ProtectedRoute><PendingVerification /></ProtectedRoute>} />
       <Route path="/verification/:id" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
       <Route path="/export" element={<ProtectedRoute><Export /></ProtectedRoute>} />
+      <Route path="/export-history" element={<ProtectedRoute><ExportHistory /></ProtectedRoute>} />
       <Route path="/activity-log" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

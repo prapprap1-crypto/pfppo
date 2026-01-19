@@ -5,7 +5,8 @@ import {
   FileText, 
   Layers, 
   FileCheck, 
-  Download, 
+  Download,
+  History,
   LogOut,
   FolderOpen,
   Users,
@@ -32,6 +33,7 @@ const mainNavItems = [
   { path: '/verification', label: 'ตรวจสอบเอกสาร', icon: FileCheck },
   { path: '/mapping-dashboard', label: 'สรุป Mapping', icon: PieChart },
   { path: '/export', label: 'ส่งออก Excel', icon: Download },
+  { path: '/export-history', label: 'ประวัติส่งออก', icon: History },
 ];
 
 const settingsNavItems = [
