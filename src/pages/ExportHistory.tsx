@@ -6,7 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Calendar, Package, Eye, Download, RefreshCw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { FileText, Calendar, Package, Eye, Download, RefreshCw, Search, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { generateC303Excel } from '@/lib/utils/excel';
@@ -50,6 +52,11 @@ const ExportHistory = () => {
   const [poDetails, setPODetails] = useState<PODetail[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [redownloading, setRedownloading] = useState<string | null>(null);
+  
+  // Filter states
+  const [searchFileName, setSearchFileName] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     fetchHistory();
@@ -180,6 +187,26 @@ const ExportHistory = () => {
     }).format(amount);
   };
 
+  // Filter history based on search criteria
+  const filteredHistory = history.filter(record => {
+    const matchesFileName = !searchFileName || 
+      record.file_name.toLowerCase().includes(searchFileName.toLowerCase());
+    
+    const exportDate = new Date(record.exported_at);
+    const matchesDateFrom = !dateFrom || exportDate >= new Date(dateFrom);
+    const matchesDateTo = !dateTo || exportDate <= new Date(dateTo + 'T23:59:59');
+    
+    return matchesFileName && matchesDateFrom && matchesDateTo;
+  });
+
+  const clearFilters = () => {
+    setSearchFileName('');
+    setDateFrom('');
+    setDateTo('');
+  };
+
+  const hasActiveFilters = searchFileName || dateFrom || dateTo;
+
   const totalExportedAmount = poDetails.reduce((sum, po) => sum + (po.grand_total || 0), 0);
 
   return (
@@ -239,12 +266,68 @@ const ExportHistory = () => {
           </Card>
         </div>
 
+        {/* Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Search className="w-5 h-5 text-primary" />
+              <h3 className="font-semibold">ค้นหาและกรอง</h3>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="ml-auto">
+                  <X className="w-4 h-4 mr-1" />
+                  ล้างตัวกรอง
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-2">
+                <Label className="flex items-center gap-2 mb-2">
+                  <FileText className="w-4 h-4" />
+                  ชื่อไฟล์
+                </Label>
+                <Input 
+                  placeholder="ค้นหาชื่อไฟล์..."
+                  value={searchFileName}
+                  onChange={(e) => setSearchFileName(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4" />
+                  วันที่เริ่มต้น
+                </Label>
+                <Input 
+                  type="date" 
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4" />
+                  วันที่สิ้นสุด
+                </Label>
+                <Input 
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Export History List */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              รายการส่งออก
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                รายการส่งออก
+              </span>
+              <span className="text-sm font-normal text-muted-foreground">
+                {filteredHistory.length} / {history.length} รายการ
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -252,10 +335,10 @@ const ExportHistory = () => {
               <div className="flex items-center justify-center py-8">
                 <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : history.length === 0 ? (
+            ) : filteredHistory.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Download className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>ยังไม่มีประวัติการส่งออก</p>
+                <p>{history.length === 0 ? 'ยังไม่มีประวัติการส่งออก' : 'ไม่พบรายการที่ค้นหา'}</p>
               </div>
             ) : (
               <Table>
@@ -268,7 +351,7 @@ const ExportHistory = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {history.map((record) => (
+                  {filteredHistory.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
