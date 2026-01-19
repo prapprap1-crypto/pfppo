@@ -9,6 +9,7 @@ import POList from "./pages/POList";
 import Mapping from "./pages/Mapping";
 import CustomerMapping from "./pages/CustomerMapping";
 import MappingDashboard from "./pages/MappingDashboard";
+import PendingVerification from "./pages/PendingVerification";
 import Verification from "./pages/Verification";
 import Export from "./pages/Export";
 import Users from "./pages/Users";
@@ -49,7 +50,7 @@ function AppRoutes() {
       <Route path="/mapping" element={<ProtectedRoute><Mapping /></ProtectedRoute>} />
       <Route path="/customer-mapping" element={<ProtectedRoute><CustomerMapping /></ProtectedRoute>} />
       <Route path="/mapping-dashboard" element={<ProtectedRoute><MappingDashboard /></ProtectedRoute>} />
-      <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
+      <Route path="/verification" element={<ProtectedRoute><PendingVerification /></ProtectedRoute>} />
       <Route path="/verification/:id" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
       <Route path="/export" element={<ProtectedRoute><Export /></ProtectedRoute>} />
       <Route path="/activity-log" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />
