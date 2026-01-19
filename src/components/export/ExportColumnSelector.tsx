@@ -22,6 +22,24 @@ import {
 import { Settings2, Save, Trash2, Star, GripVertical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { cn } from '@/lib/utils';
 
 export interface ExportColumn {
   key: string;
@@ -55,6 +73,58 @@ interface ExportTemplate {
   is_default: boolean;
 }
 
+interface SortableColumnItemProps {
+  column: ExportColumn;
+  onToggle: (key: string, checked: boolean) => void;
+}
+
+function SortableColumnItem({ column, onToggle }: SortableColumnItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: column.key });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-2 p-2 rounded border bg-background",
+        isDragging && "opacity-50 shadow-lg z-50",
+        column.enabled ? "border-primary/30" : "border-transparent"
+      )}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none"
+      >
+        <GripVertical className="w-4 h-4 text-muted-foreground" />
+      </button>
+      <Checkbox
+        id={column.key}
+        checked={column.enabled}
+        onCheckedChange={(checked) => onToggle(column.key, checked as boolean)}
+      />
+      <Label
+        htmlFor={column.key}
+        className="text-sm cursor-pointer flex-1"
+      >
+        {column.label}
+      </Label>
+    </div>
+  );
+}
+
 interface ExportColumnSelectorProps {
   columns: ExportColumn[];
   onColumnsChange: (columns: ExportColumn[]) => void;
@@ -68,6 +138,17 @@ export function ExportColumnSelector({ columns, onColumnsChange }: ExportColumnS
   const [newTemplateName, setNewTemplateName] = useState('');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [localColumns, setLocalColumns] = useState<ExportColumn[]>(columns);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     fetchTemplates();
@@ -85,14 +166,14 @@ export function ExportColumnSelector({ columns, onColumnsChange }: ExportColumnS
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
+
       const parsedTemplates = (data || []).map(t => ({
         id: t.id,
         name: t.name,
         columns: t.columns as unknown as ExportColumn[],
         is_default: t.is_default || false,
       }));
-      
+
       setTemplates(parsedTemplates);
 
       // Load default template if exists
@@ -107,10 +188,22 @@ export function ExportColumnSelector({ columns, onColumnsChange }: ExportColumnS
   };
 
   const handleColumnToggle = (key: string, checked: boolean) => {
-    const updated = localColumns.map(col => 
+    const updated = localColumns.map(col =>
       col.key === key ? { ...col, enabled: checked } : col
     );
     setLocalColumns(updated);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setLocalColumns((items) => {
+        const oldIndex = items.findIndex((item) => item.key === active.id);
+        const newIndex = items.findIndex((item) => item.key === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   const handleApply = () => {
@@ -244,7 +337,7 @@ export function ExportColumnSelector({ columns, onColumnsChange }: ExportColumnS
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings2 className="w-5 h-5" />
-            เลือกคอลัมน์ที่ต้องการส่งออก
+            เลือกและจัดลำดับคอลัมน์
           </DialogTitle>
         </DialogHeader>
 
@@ -276,16 +369,16 @@ export function ExportColumnSelector({ columns, onColumnsChange }: ExportColumnS
           {/* Template Actions */}
           {selectedTemplateId && (
             <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={() => handleSetDefault(selectedTemplateId)}
               >
                 <Star className="w-4 h-4 mr-1" />
                 ตั้งเป็นค่าเริ่มต้น
               </Button>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 className="text-destructive"
                 onClick={() => handleDeleteTemplate(selectedTemplateId)}
@@ -296,33 +389,37 @@ export function ExportColumnSelector({ columns, onColumnsChange }: ExportColumnS
             </div>
           )}
 
-          {/* Column Selection */}
+          {/* Column Selection with Drag & Drop */}
           <div className="border rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
-              <Label className="font-medium">เลือกคอลัมน์</Label>
+              <div>
+                <Label className="font-medium">เลือกและจัดลำดับคอลัมน์</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ลากเพื่อเปลี่ยนลำดับคอลัมน์ในไฟล์ Excel
+                </p>
+              </div>
               <Badge variant="secondary">{enabledCount} คอลัมน์</Badge>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {localColumns.map((column) => (
-                <div 
-                  key={column.key} 
-                  className="flex items-center gap-2 p-2 rounded hover:bg-muted/50"
-                >
-                  <GripVertical className="w-4 h-4 text-muted-foreground/50" />
-                  <Checkbox
-                    id={column.key}
-                    checked={column.enabled}
-                    onCheckedChange={(checked) => handleColumnToggle(column.key, checked as boolean)}
-                  />
-                  <Label 
-                    htmlFor={column.key} 
-                    className="text-sm cursor-pointer flex-1"
-                  >
-                    {column.label}
-                  </Label>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={localColumns.map(c => c.key)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-1">
+                  {localColumns.map((column) => (
+                    <SortableColumnItem
+                      key={column.key}
+                      column={column}
+                      onToggle={handleColumnToggle}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           </div>
 
           {/* Save New Template */}
@@ -337,9 +434,9 @@ export function ExportColumnSelector({ columns, onColumnsChange }: ExportColumnS
               <Button size="sm" onClick={handleSaveTemplate}>
                 บันทึก
               </Button>
-              <Button 
-                size="sm" 
-                variant="ghost" 
+              <Button
+                size="sm"
+                variant="ghost"
                 onClick={() => {
                   setShowSaveDialog(false);
                   setNewTemplateName('');
@@ -349,8 +446,8 @@ export function ExportColumnSelector({ columns, onColumnsChange }: ExportColumnS
               </Button>
             </div>
           ) : (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full gap-2"
               onClick={() => setShowSaveDialog(true)}
             >
