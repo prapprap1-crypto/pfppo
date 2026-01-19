@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { POTable } from '@/components/po/POTable';
+import { MappingAlertBanner } from '@/components/po/MappingAlertBanner';
 import { FileUploadZone } from '@/components/upload/FileUploadZone';
 import { fetchPOHeaders, findBranchMapping } from '@/lib/api/database';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Upload, RefreshCw } from 'lucide-react';
 import { POHeader } from '@/types/po';
@@ -11,6 +13,7 @@ const POList = () => {
   const [showUpload, setShowUpload] = useState(false);
   const [poHeaders, setPOHeaders] = useState<POHeader[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unmappedProductsCount, setUnmappedProductsCount] = useState(0);
 
   const loadData = async () => {
     setLoading(true);
@@ -56,6 +59,14 @@ const POList = () => {
       );
       
       setPOHeaders(mappedHeaders);
+
+      // Count unmapped products
+      const { count } = await supabase
+        .from('po_items')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_mapped', false);
+      
+      setUnmappedProductsCount(count || 0);
     } catch (error) {
       console.error('Error loading PO headers:', error);
       setPOHeaders([]);
@@ -68,9 +79,19 @@ const POList = () => {
     loadData();
   }, []);
 
+  // Calculate mapping stats
+  const mappingStats = useMemo(() => ({
+    totalPOs: poHeaders.length,
+    unmappedCustomer: poHeaders.filter(p => p.customerName && !p.isCustomerMapped).length,
+    unmappedBranch: poHeaders.filter(p => p.branch && !p.isBranchMapped).length,
+    unmappedProducts: unmappedProductsCount,
+  }), [poHeaders, unmappedProductsCount]);
+
   return (
     <MainLayout title="รายการ PO" subtitle="จัดการใบสั่งซื้อทั้งหมด">
       <div className="space-y-6">
+        <MappingAlertBanner stats={mappingStats} />
+        
         <div className="flex items-center justify-between">
           <div>
             <p className="text-muted-foreground">ทั้งหมด {poHeaders.length} รายการ</p>
