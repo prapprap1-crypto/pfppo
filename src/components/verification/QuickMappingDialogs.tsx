@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,14 +11,35 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Building2, MapPin, Package, Loader2 } from 'lucide-react';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Plus, Building2, MapPin, Package, Loader2, Search, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   createCustomerMapping, 
   createCustomerBranchMapping, 
   createProductMapping,
-  findCustomerMappingByName 
+  findCustomerMappingByName,
+  fetchProductMappings
 } from '@/lib/api/database';
+import { cn } from '@/lib/utils';
+
+interface VendorProduct {
+  id: string;
+  vendor_code: string;
+  vendor_desc: string;
+}
 
 interface QuickCustomerMappingDialogProps {
   customerName: string;
@@ -263,6 +284,48 @@ export function QuickProductMappingDialog({ customerCode, customerDesc, unit, on
   const [loading, setLoading] = useState(false);
   const [vendorCode, setVendorCode] = useState('');
   const [vendorDesc, setVendorDesc] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [vendorProducts, setVendorProducts] = useState<VendorProduct[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
+  // Load existing vendor products for autocomplete
+  const loadVendorProducts = useCallback(async () => {
+    if (vendorProducts.length > 0) return; // Already loaded
+    
+    setLoadingProducts(true);
+    try {
+      const mappings = await fetchProductMappings();
+      // Get unique vendor products
+      const uniqueProducts = new Map<string, VendorProduct>();
+      (mappings || []).forEach((m: any) => {
+        if (m.vendor_code && !uniqueProducts.has(m.vendor_code)) {
+          uniqueProducts.set(m.vendor_code, {
+            id: m.id,
+            vendor_code: m.vendor_code,
+            vendor_desc: m.vendor_desc || '',
+          });
+        }
+      });
+      setVendorProducts(Array.from(uniqueProducts.values()));
+    } catch (error) {
+      console.error('Error loading vendor products:', error);
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, [vendorProducts.length]);
+
+  // Load products when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadVendorProducts();
+    }
+  }, [open, loadVendorProducts]);
+
+  const handleSelectProduct = (product: VendorProduct) => {
+    setVendorCode(product.vendor_code);
+    setVendorDesc(product.vendor_desc);
+    setSearchOpen(false);
+  };
 
   const handleSubmit = async () => {
     if (!vendorCode || !vendorDesc) {
@@ -332,6 +395,84 @@ export function QuickProductMappingDialog({ customerCode, customerDesc, unit, on
             <Label>รายละเอียดสินค้าลูกค้า</Label>
             <Input value={customerDesc} disabled className="bg-muted" />
           </div>
+          
+          {/* Vendor Product Search */}
+          <div className="space-y-2">
+            <Label>ค้นหาสินค้า Vendor</Label>
+            <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={searchOpen}
+                  className="w-full justify-between"
+                >
+                  {vendorCode ? (
+                    <span className="truncate">{vendorCode} - {vendorDesc}</span>
+                  ) : (
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <Search className="w-4 h-4" />
+                      ค้นหาหรือเลือกสินค้า Vendor...
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[350px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="พิมพ์รหัสหรือชื่อสินค้า..." />
+                  <CommandList>
+                    <CommandEmpty>
+                      {loadingProducts ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          กำลังโหลด...
+                        </div>
+                      ) : (
+                        <div className="py-4 text-center text-sm">
+                          ไม่พบสินค้า - กรอกข้อมูลด้านล่าง
+                        </div>
+                      )}
+                    </CommandEmpty>
+                    <CommandGroup heading="สินค้า Vendor ที่มีอยู่">
+                      {vendorProducts.map((product) => (
+                        <CommandItem
+                          key={product.id}
+                          value={`${product.vendor_code} ${product.vendor_desc}`}
+                          onSelect={() => handleSelectProduct(product)}
+                          className="cursor-pointer"
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              vendorCode === product.vendor_code ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span className="font-medium">{product.vendor_code}</span>
+                            <span className="text-xs text-muted-foreground truncate max-w-[280px]">
+                              {product.vendor_desc}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                หรือกรอกเอง
+              </span>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="productVendorCode">รหัสสินค้า Vendor *</Label>
             <Input
