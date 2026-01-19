@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { createPOHeader, createPOItems, autoCreateMappingsForItems, findMappingsForCodes, findCustomerMappingByName, autoCreateCustomerMapping } from '@/lib/api/database';
+import { createPOHeader, createPOItems, autoCreateMappingsForItems, findMappingsForCodes, findCustomerMappingByName, autoCreateCustomerMapping, autoCreateBranchMapping } from '@/lib/api/database';
 import {
   Dialog,
   DialogContent,
@@ -264,9 +264,23 @@ export function FileUploadZone({
           // Auto-create customer mapping if not exists
           if (extractedData.customer_name) {
             try {
-              await autoCreateCustomerMapping(extractedData.customer_name);
+              const createdCustomerMapping = await autoCreateCustomerMapping(extractedData.customer_name);
+              
+              // Auto-create branch mapping if we have branch info
+              if (extractedData.branch) {
+                // Get customer mapping ID (either from newly created or existing)
+                let customerMappingId = createdCustomerMapping?.id;
+                if (!customerMappingId && customerMapping) {
+                  customerMappingId = customerMapping.id;
+                }
+                
+                if (customerMappingId) {
+                  await autoCreateBranchMapping(customerMappingId, extractedData.branch);
+                  console.log(`Auto-created branch mapping for: ${extractedData.branch}`);
+                }
+              }
             } catch (customerMappingError) {
-              console.error('Error auto-creating customer mapping:', customerMappingError);
+              console.error('Error auto-creating customer/branch mapping:', customerMappingError);
             }
           }
         }

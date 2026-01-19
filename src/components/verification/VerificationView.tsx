@@ -11,12 +11,13 @@ import {
   FileText, 
   RefreshCw,
   Building2,
-  Package
+  Package,
+  MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { POHeader, POItem } from '@/types/po';
-import { refreshPOMappings, refreshPOCustomerMapping } from '@/lib/api/database';
+import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping } from '@/lib/api/database';
 import { supabase } from '@/integrations/supabase/client';
 import { PdfViewer } from './PdfViewer';
 
@@ -271,6 +272,41 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
               <RefreshCw className={cn("w-4 h-4", isRefreshingCustomer && "animate-spin")} />
               อัปเดต Mapping ลูกค้า
             </Button>
+          </div>
+        </div>
+
+        {/* Branch Mapping Info */}
+        <div className="mt-2 p-3 rounded-lg bg-muted/30 border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <MapPin className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">สาขา:</span>
+                  <span className="font-medium">{localPO.branch || '-'}</span>
+                  {localPO.isBranchMapped ? (
+                    <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-200 gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Mapped
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-200 gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      ยังไม่ได้ Mapping
+                    </Badge>
+                  )}
+                </div>
+                {localPO.isBranchMapped && localPO.vendorBranchCode && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    <span>รหัส Vendor: </span>
+                    <span className="font-medium text-foreground">{localPO.vendorBranchCode}</span>
+                    <span className="mx-2">|</span>
+                    <span>ชื่อ Vendor: </span>
+                    <span className="font-medium text-foreground">{localPO.vendorBranchName}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

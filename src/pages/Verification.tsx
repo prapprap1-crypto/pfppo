@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { VerificationView } from '@/components/verification/VerificationView';
-import { fetchPOHeaderById, fetchPOItems } from '@/lib/api/database';
+import { fetchPOHeaderById, fetchPOItems, findBranchMapping } from '@/lib/api/database';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { POHeader, POItem } from '@/types/po';
@@ -34,6 +34,16 @@ const Verification = () => {
           return;
         }
 
+        // Get branch mapping if customer name and branch exist
+        let branchMappingResult = null;
+        if (poData.customer_name && poData.branch) {
+          try {
+            branchMappingResult = await findBranchMapping(poData.customer_name, poData.branch);
+          } catch (err) {
+            console.error('Error finding branch mapping:', err);
+          }
+        }
+
         // Map to POHeader type
         const mappedPO: POHeader = {
           id: poData.id,
@@ -54,6 +64,9 @@ const Verification = () => {
           vendorCustomerCode: poData.vendor_customer_code || undefined,
           vendorCustomerName: poData.vendor_customer_name || undefined,
           isCustomerMapped: poData.is_customer_mapped || false,
+          vendorBranchCode: branchMappingResult?.branchMapping?.vendor_branch_code || undefined,
+          vendorBranchName: branchMappingResult?.branchMapping?.vendor_branch_name || undefined,
+          isBranchMapped: !!(branchMappingResult?.branchMapping?.vendor_branch_code),
         };
         setPo(mappedPO);
 
