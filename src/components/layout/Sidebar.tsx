@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -11,20 +12,31 @@ import {
   UserCircle,
   Activity,
   Building2,
-  PieChart
+  PieChart,
+  Settings,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
-const navItems = [
+const mainNavItems = [
   { path: '/', label: 'แดชบอร์ด', icon: LayoutDashboard },
   { path: '/po-list', label: 'รายการ PO', icon: FileText },
+  { path: '/verification', label: 'ตรวจสอบเอกสาร', icon: FileCheck },
+  { path: '/mapping-dashboard', label: 'สรุป Mapping', icon: PieChart },
+  { path: '/export', label: 'ส่งออก Excel', icon: Download },
+];
+
+const settingsNavItems = [
   { path: '/mapping', label: 'Mapping สินค้า', icon: Layers },
   { path: '/customer-mapping', label: 'Mapping ลูกค้า', icon: Building2 },
-  { path: '/mapping-dashboard', label: 'สรุป Mapping', icon: PieChart },
-  { path: '/verification', label: 'ตรวจสอบเอกสาร', icon: FileCheck },
-  { path: '/export', label: 'ส่งออก Excel', icon: Download },
   { path: '/activity-log', label: 'ประวัติการใช้งาน', icon: Activity },
   { path: '/users', label: 'จัดการผู้ใช้', icon: Users },
   { path: '/profile', label: 'โปรไฟล์', icon: UserCircle },
@@ -33,6 +45,9 @@ const navItems = [
 export function Sidebar() {
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const [settingsOpen, setSettingsOpen] = useState(
+    settingsNavItems.some(item => location.pathname === item.path)
+  );
 
   return (
     <aside className="w-64 min-h-screen bg-sidebar flex flex-col">
@@ -51,7 +66,8 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
+        {/* Main Navigation */}
+        {mainNavItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
           
@@ -66,6 +82,41 @@ export function Sidebar() {
             </Link>
           );
         })}
+
+        {/* Settings Collapsible */}
+        <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <CollapsibleTrigger className="nav-link w-full justify-between group">
+            <div className="flex items-center gap-3">
+              <Settings className="w-5 h-5" />
+              <span>ตั้งค่า</span>
+            </div>
+            {settingsOpen ? (
+              <ChevronDown className="w-4 h-4 text-sidebar-foreground/60" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-sidebar-foreground/60" />
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-3">
+            {settingsNavItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              const Icon = item.icon;
+              
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={cn(
+                    'nav-link text-sm py-2',
+                    isActive && 'nav-link-active'
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </CollapsibleContent>
+        </Collapsible>
       </nav>
 
       {/* User & Logout */}
