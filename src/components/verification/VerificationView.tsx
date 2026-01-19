@@ -12,18 +12,20 @@ import {
   RefreshCw,
   Building2,
   Package,
-  MapPin
+  MapPin,
+  Pencil
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { POHeader, POItem } from '@/types/po';
-import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping } from '@/lib/api/database';
+import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping, updatePOHeader } from '@/lib/api/database';
 import { supabase } from '@/integrations/supabase/client';
 import { PdfViewer } from './PdfViewer';
 import { 
   QuickCustomerMappingDialog, 
   QuickBranchMappingDialog, 
-  QuickProductMappingDialog 
+  QuickProductMappingDialog,
+  EditCustomerNameDialog
 } from './QuickMappingDialogs';
 
 interface VerificationViewProps {
@@ -299,6 +301,21 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">ลูกค้า:</span>
                   <span className="font-medium">{localPO.customerName || '-'}</span>
+                  {localPO.customerName && (
+                    <EditCustomerNameDialog
+                      poId={po.id}
+                      currentCustomerName={localPO.customerName}
+                      onSuccess={(newName) => {
+                        setLocalPO({
+                          ...localPO,
+                          customerName: newName,
+                          isCustomerMapped: false,
+                          vendorCustomerCode: undefined,
+                          vendorCustomerName: undefined,
+                        });
+                      }}
+                    />
+                  )}
                   {localPO.isCustomerMapped ? (
                     <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-200 gap-1">
                       <CheckCircle2 className="w-3 h-3" />

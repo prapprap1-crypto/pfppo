@@ -25,7 +25,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Building2, MapPin, Package, Loader2, Search, Check, Sparkles } from 'lucide-react';
+import { Plus, Building2, MapPin, Package, Loader2, Search, Check, Sparkles, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   createCustomerMapping, 
@@ -819,6 +819,198 @@ export function QuickProductMappingDialog({ customerCode, customerDesc, unit, on
               placeholder="เช่น สินค้า ABC"
             />
           </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>ยกเลิก</Button>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            บันทึก
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Edit Customer Name Dialog - สำหรับแก้ไขชื่อลูกค้าที่ AI อ่านผิด
+interface EditCustomerNameDialogProps {
+  poId: string;
+  currentCustomerName: string;
+  onSuccess: (newName: string) => void;
+}
+
+export function EditCustomerNameDialog({ poId, currentCustomerName, onSuccess }: EditCustomerNameDialogProps) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [customerName, setCustomerName] = useState(currentCustomerName);
+  const [allCustomerMappings, setAllCustomerMappings] = useState<CustomerMapping[]>([]);
+  const [loadingMappings, setLoadingMappings] = useState(false);
+
+  // Reset name when dialog opens
+  useEffect(() => {
+    if (open) {
+      setCustomerName(currentCustomerName);
+      loadCustomerMappings();
+    }
+  }, [open, currentCustomerName]);
+
+  const loadCustomerMappings = async () => {
+    if (allCustomerMappings.length > 0) return;
+    
+    setLoadingMappings(true);
+    try {
+      const mappings = await fetchCustomerMappings();
+      setAllCustomerMappings((mappings || []).map((m: any) => ({
+        id: m.id,
+        customer_name: m.customer_name || '',
+        vendor_customer_code: m.vendor_customer_code || '',
+        vendor_customer_name: m.vendor_customer_name || '',
+      })));
+    } catch (error) {
+      console.error('Error loading customer mappings:', error);
+    } finally {
+      setLoadingMappings(false);
+    }
+  };
+
+  // Find similar customer names from mappings
+  const similarMappings = useMemo(() => {
+    if (!customerName || allCustomerMappings.length === 0) return [];
+    
+    const matches = findSimilarMatches<CustomerMapping>(
+      customerName,
+      allCustomerMappings,
+      (m) => m.customer_name,
+      60
+    );
+    
+    return matches.slice(0, 5);
+  }, [customerName, allCustomerMappings]);
+
+  const handleSelectSuggestion = (mapping: CustomerMapping) => {
+    setCustomerName(mapping.customer_name);
+  };
+
+  const handleSubmit = async () => {
+    if (!customerName.trim()) {
+      toast({
+        title: 'กรุณากรอกชื่อลูกค้า',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (customerName === currentCustomerName) {
+      setOpen(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { error } = await supabase
+        .from('po_headers')
+        .update({ 
+          customer_name: customerName.trim(),
+          is_customer_mapped: false, // Reset mapping status to allow re-match
+          vendor_customer_code: null,
+          vendor_customer_name: null,
+        })
+        .eq('id', poId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'แก้ไขชื่อลูกค้าสำเร็จ',
+        description: `เปลี่ยนจาก "${currentCustomerName}" เป็น "${customerName}"`,
+      });
+
+      setOpen(false);
+      onSuccess(customerName.trim());
+    } catch (error) {
+      console.error('Error updating customer name:', error);
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถแก้ไขชื่อลูกค้าได้',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1 hover:bg-primary/10" title="แก้ไขชื่อลูกค้า">
+          <Pencil className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="w-5 h-5" />
+            แก้ไขชื่อลูกค้า
+          </DialogTitle>
+          <DialogDescription>
+            แก้ไขชื่อลูกค้าที่ AI อ่านมาผิด เพื่อให้สามารถจับคู่ Mapping ได้ถูกต้อง
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-2">
+            <Label>ชื่อลูกค้าปัจจุบัน (จาก AI)</Label>
+            <Input value={currentCustomerName} disabled className="bg-muted text-muted-foreground" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="newCustomerName">ชื่อลูกค้าที่ถูกต้อง *</Label>
+            <Input
+              id="newCustomerName"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="กรอกชื่อลูกค้าที่ถูกต้อง"
+              className="border-primary/50"
+            />
+          </div>
+
+          {/* Similar Customer Names Suggestions */}
+          {similarMappings.length > 0 && (
+            <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Sparkles className="w-4 h-4 text-yellow-500" />
+                <span>ชื่อลูกค้าที่ใกล้เคียง (แนะนำ)</span>
+              </div>
+              <div className="space-y-2">
+                {similarMappings.map((match) => (
+                  <div
+                    key={match.item.id}
+                    className="flex items-center justify-between p-2 bg-background rounded border cursor-pointer hover:bg-accent transition-colors"
+                    onClick={() => handleSelectSuggestion(match.item)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate font-medium">{match.item.customer_name}</p>
+                      {match.item.vendor_customer_code && (
+                        <p className="text-xs text-muted-foreground">
+                          รหัส: {match.item.vendor_customer_code}
+                        </p>
+                      )}
+                    </div>
+                    <Badge 
+                      variant={match.similarity >= 90 ? 'default' : match.similarity >= 70 ? 'secondary' : 'outline'}
+                      className={cn("ml-2 shrink-0", getSimilarityColor(match.similarity))}
+                    >
+                      {match.similarity}%
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                คลิกเพื่อใช้ชื่อที่แนะนำ
+              </p>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>ยกเลิก</Button>
