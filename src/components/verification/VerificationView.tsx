@@ -28,6 +28,7 @@ import {
   EditCustomerNameDialog,
   EditBranchNameDialog
 } from './QuickMappingDialogs';
+import { EditHistoryDialog } from './EditHistoryDialog';
 
 interface VerificationViewProps {
   po: POHeader;
@@ -281,6 +282,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <EditHistoryDialog poId={po.id} />
             <span className={cn('status-badge px-3 py-1 rounded-full text-sm font-medium border', STATUS_CLASSES[localPO.status])}>
               {STATUS_LABELS[localPO.status]}
             </span>
