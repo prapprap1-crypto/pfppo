@@ -238,8 +238,8 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
     try {
       setIsRefreshingBranch(true);
       
-      // Find branch mapping
-      const branchResult = await findBranchMapping(localPO.customerName || '', localPO.branch);
+      // Find branch mapping with fuzzy matching enabled (85% threshold)
+      const branchResult = await findBranchMapping(localPO.customerName || '', localPO.branch, true, 85);
       
       if (branchResult?.branchMapping) {
         setLocalPO({
@@ -249,9 +249,15 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
           isBranchMapped: !!(branchResult.branchMapping.vendor_branch_code),
         });
 
+        const description = branchResult.fuzzyMatched 
+          ? `จับคู่กับ "${branchResult.matchedBranch}" (${branchResult.similarity}% ใกล้เคียง) → ${branchResult.branchMapping.vendor_branch_name}`
+          : `อัปเดตเป็น: ${branchResult.branchMapping.vendor_branch_name}`;
+        
         toast({
-          title: "อัปเดต Mapping สาขาสำเร็จ",
-          description: `อัปเดตเป็น: ${branchResult.branchMapping.vendor_branch_name}`,
+          title: branchResult.fuzzyMatched 
+            ? `พบ Mapping สาขาที่ใกล้เคียง (${branchResult.similarity}%)` 
+            : "อัปเดต Mapping สาขาสำเร็จ",
+          description,
         });
       } else {
         setLocalPO({

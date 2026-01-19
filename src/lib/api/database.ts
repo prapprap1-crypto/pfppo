@@ -586,13 +586,13 @@ export async function deleteCustomerBranchMapping(id: string) {
   if (error) throw error;
 }
 
-export async function findBranchMapping(customerName: string, branch: string) {
+export async function findBranchMapping(customerName: string, branch: string, useFuzzy: boolean = false, minSimilarity: number = 85) {
   // First find the customer mapping
   const customerMapping = await findCustomerMappingByName(customerName);
   if (!customerMapping) return null;
 
-  // Then find the branch mapping
-  const { data, error } = await supabase
+  // Then find the branch mapping with exact match first
+  const { data: exactMatch, error: exactError } = await supabase
     .from('customer_branch_mappings')
     .select('*')
     .eq('customer_mapping_id', customerMapping.id)
@@ -600,8 +600,56 @@ export async function findBranchMapping(customerName: string, branch: string) {
     .eq('active', true)
     .maybeSingle();
   
-  if (error) throw error;
-  return data ? { customerMapping, branchMapping: data } : { customerMapping, branchMapping: null };
+  if (exactError) throw exactError;
+  
+  if (exactMatch) {
+    return { 
+      customerMapping, 
+      branchMapping: exactMatch, 
+      fuzzyMatched: false,
+      similarity: 100,
+      matchedBranch: branch
+    };
+  }
+
+  // If no exact match and fuzzy is enabled, try fuzzy matching
+  if (useFuzzy && branch) {
+    const { data: allBranches, error: allError } = await supabase
+      .from('customer_branch_mappings')
+      .select('*')
+      .eq('customer_mapping_id', customerMapping.id)
+      .eq('active', true);
+    
+    if (allError) throw allError;
+    
+    if (allBranches && allBranches.length > 0) {
+      // Import similarity function dynamically to avoid circular dependencies
+      const { calculateSimilarity } = await import('@/lib/utils/similarity');
+      
+      let bestMatch = null;
+      let bestSimilarity = 0;
+      
+      for (const branchMapping of allBranches) {
+        const similarity = calculateSimilarity(branch, branchMapping.branch);
+        if (similarity >= minSimilarity && similarity > bestSimilarity) {
+          bestSimilarity = similarity;
+          bestMatch = branchMapping;
+        }
+      }
+      
+      if (bestMatch) {
+        return {
+          customerMapping,
+          branchMapping: bestMatch,
+          fuzzyMatched: true,
+          similarity: bestSimilarity,
+          matchedBranch: bestMatch.branch
+        };
+      }
+    }
+  }
+
+  return { customerMapping, branchMapping: null, fuzzyMatched: false, similarity: 0, matchedBranch: null };
 }
 
 export async function autoCreateBranchMapping(customerMappingId: string, branch: string) {
