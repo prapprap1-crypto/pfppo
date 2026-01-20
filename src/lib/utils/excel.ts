@@ -51,7 +51,7 @@ const COLUMN_MAPPINGS: Record<string, { header: string; width: number; getValue:
   warehouse_name: { header: 'Warehouse', width: 20, getValue: (item) => item.warehouse_name || '' },
   vehicle_position_code: { header: 'Vehicle Position Code', width: 18, getValue: (item) => item.vehicle_position_code || '' },
   vehicle_position_name: { header: 'Vehicle Position', width: 20, getValue: (item) => item.vehicle_position_name || '' },
-  vat_type: { header: 'VAT', width: 8, getValue: (item) => item.vat_type === 1 ? 'Vat' : 'No Vat' },
+  vat_type: { header: 'VAT', width: 8, getValue: (item) => item.vat_type === 1 ? 1 : 0 },
   transport_code: { header: 'Transport Code', width: 15, getValue: (item) => item.transport_code || '' },
   transport_name: { header: 'Transport', width: 20, getValue: (item) => item.transport_name || '' },
 };
