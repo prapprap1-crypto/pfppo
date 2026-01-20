@@ -79,16 +79,19 @@ export function ExportPanel({ poList }: ExportPanelProps) {
       let warehouseData: { code: string; name: string } | null = null;
       let vehiclePositionData: { code: string; name: string } | null = null;
       let transportCodeData: { code: string; name: string } | null = null;
+      let branchData: { vendor_branch_code: string | null; vendor_branch_name: string | null } | null = null;
       let vatType = 1;
+      let customerMappingId: string | null = null;
       
       if (po.vendorCustomerCode) {
         const { data: customerMapping } = await supabase
           .from('customer_mappings')
-          .select('warehouse_id, vehicle_position_id, transport_code_id, vat_type')
+          .select('id, warehouse_id, vehicle_position_id, transport_code_id, vat_type')
           .eq('vendor_customer_code', po.vendorCustomerCode)
           .maybeSingle();
         
         if (customerMapping) {
+          customerMappingId = customerMapping.id;
           vatType = customerMapping.vat_type ?? 1;
           
           // Fetch related data separately
@@ -121,6 +124,26 @@ export function ExportPanel({ poList }: ExportPanelProps) {
         }
       }
       
+      // Fetch branch mapping - first try from po_headers, then from customer_branch_mappings
+      let vendorBranchCode = po.vendorBranchCode || '';
+      let vendorBranchName = '';
+      
+      if (!vendorBranchCode && customerMappingId && po.branch) {
+        // Try to find branch mapping from customer_branch_mappings table
+        const { data: branchMapping } = await supabase
+          .from('customer_branch_mappings')
+          .select('vendor_branch_code, vendor_branch_name')
+          .eq('customer_mapping_id', customerMappingId)
+          .eq('branch', po.branch)
+          .eq('active', true)
+          .maybeSingle();
+        
+        if (branchMapping) {
+          vendorBranchCode = branchMapping.vendor_branch_code || '';
+          vendorBranchName = branchMapping.vendor_branch_name || '';
+        }
+      }
+      
       const items = await fetchPOItems(poId);
       for (const item of items) {
         allItems.push({
@@ -135,7 +158,7 @@ export function ExportPanel({ poList }: ExportPanelProps) {
           unit_price: item.unit_price,
           amount: item.amount,
           // Customer mapping fields
-          vendor_branch_code: po.vendorBranchCode || '',
+          vendor_branch_code: vendorBranchCode,
           warehouse_code: warehouseData?.code || '',
           warehouse_name: warehouseData?.name || '',
           vehicle_position_code: vehiclePositionData?.code || '',
