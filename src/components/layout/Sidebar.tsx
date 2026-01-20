@@ -21,7 +21,8 @@ import {
   Warehouse,
   MapPinned,
   Truck,
-  UserCheck
+  UserCheck,
+  BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,6 +53,7 @@ const settingsNavItems = [
   { path: '/activity-log', label: 'ประวัติการใช้งาน', icon: Activity },
   { path: '/users', label: 'จัดการผู้ใช้', icon: Users },
   { path: '/profile', label: 'โปรไฟล์', icon: UserCircle },
+  { path: '/user-guide', label: 'คู่มือการใช้งาน', icon: BookOpen },
 ];
 
 export function Sidebar() {
