@@ -36,6 +36,7 @@ const Export = () => {
             isCustomerMapped: h.is_customer_mapped,
             vendorBranchCode: h.vendor_branch_code,
             vendorBranchName: h.vendor_branch_name,
+            remark: h.remark,
           })));
         }
       } catch (error) {
