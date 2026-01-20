@@ -85,7 +85,17 @@ interface ExportTemplate {
   name: string;
   columns: ExportColumn[];
   is_default: boolean;
+  is_builtin?: boolean;
 }
+
+// Built-in template for Express V1
+const BUILTIN_EXPRESS_TEMPLATE: ExportTemplate = {
+  id: 'builtin-express-v1',
+  name: 'Export for Express V1',
+  columns: DEFAULT_COLUMNS,
+  is_default: true,
+  is_builtin: true,
+};
 
 interface SortableColumnItemProps {
   column: ExportColumn;
@@ -181,20 +191,27 @@ export function ExportColumnSelector({ columns, onColumnsChange }: ExportColumnS
 
       if (error) throw error;
 
-      const parsedTemplates = (data || []).map(t => ({
+      const parsedTemplates: ExportTemplate[] = (data || []).map(t => ({
         id: t.id,
         name: t.name,
         columns: t.columns as unknown as ExportColumn[],
         is_default: t.is_default || false,
+        is_builtin: false,
       }));
 
-      setTemplates(parsedTemplates);
+      // Add built-in Express template at the beginning
+      const allTemplates = [BUILTIN_EXPRESS_TEMPLATE, ...parsedTemplates];
+      setTemplates(allTemplates);
 
-      // Load default template if exists
-      const defaultTemplate = parsedTemplates.find(t => t.is_default);
-      if (defaultTemplate) {
-        setSelectedTemplateId(defaultTemplate.id);
-        onColumnsChange(defaultTemplate.columns);
+      // Load default template - prioritize user's default, then built-in
+      const userDefault = parsedTemplates.find(t => t.is_default);
+      if (userDefault) {
+        setSelectedTemplateId(userDefault.id);
+        onColumnsChange(userDefault.columns);
+      } else {
+        // Use built-in Express V1 as default
+        setSelectedTemplateId(BUILTIN_EXPRESS_TEMPLATE.id);
+        onColumnsChange(BUILTIN_EXPRESS_TEMPLATE.columns);
       }
     } catch (error) {
       console.error('Error fetching templates:', error);
@@ -366,9 +383,10 @@ export function ExportColumnSelector({ columns, onColumnsChange }: ExportColumnS
                 {templates.map(template => (
                   <SelectItem key={template.id} value={template.id}>
                     <span className="flex items-center gap-2">
+                      {template.is_builtin && <span className="text-xs text-primary">[ระบบ]</span>}
                       {template.name}
-                      {template.is_default && (
-                        <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                      {template.is_default && !template.is_builtin && (
+                        <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
                       )}
                     </span>
                   </SelectItem>
@@ -380,8 +398,8 @@ export function ExportColumnSelector({ columns, onColumnsChange }: ExportColumnS
             </Button>
           </div>
 
-          {/* Template Actions */}
-          {selectedTemplateId && (
+          {/* Template Actions - hide for built-in templates */}
+          {selectedTemplateId && !templates.find(t => t.id === selectedTemplateId)?.is_builtin && (
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
