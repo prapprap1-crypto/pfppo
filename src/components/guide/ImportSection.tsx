@@ -1,12 +1,9 @@
 import { Card } from '@/components/ui/card';
 import { Upload, ChevronRight, CheckCircle2 } from 'lucide-react';
-import { GuideScreenshot } from './GuideScreenshot';
 
-export const ImportSection = ({ image }: { image: string }) => (
+export const ImportSection = () => (
   <div className="space-y-6">
     <h2 className="text-2xl font-bold text-foreground">การนำเข้าเอกสาร PDF</h2>
-    
-    <GuideScreenshot src={image} alt="หน้า Dashboard" caption="ภาพ: หน้าหลักแสดงพื้นที่สำหรับลากวางไฟล์ PDF" />
     
     <Card className="p-6">
       <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -39,9 +36,9 @@ export const ImportSection = ({ image }: { image: string }) => (
         ตรวจสอบผลลัพธ์
       </h3>
       <ul className="space-y-2 text-muted-foreground">
-        <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 mt-1 text-green-500" /><span>สร้างรายการ PO ใหม่ในระบบ</span></li>
-        <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 mt-1 text-green-500" /><span>พยายามจับคู่ลูกค้าและสินค้าโดยอัตโนมัติ</span></li>
-        <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 mt-1 text-green-500" /><span>แสดงสถานะการ Mapping</span></li>
+        <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 mt-1 text-primary" /><span>สร้างรายการ PO ใหม่ในระบบ</span></li>
+        <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 mt-1 text-primary" /><span>พยายามจับคู่ลูกค้าและสินค้าโดยอัตโนมัติ</span></li>
+        <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 mt-1 text-primary" /><span>แสดงสถานะการ Mapping</span></li>
       </ul>
     </Card>
   </div>

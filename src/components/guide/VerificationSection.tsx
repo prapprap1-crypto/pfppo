@@ -1,12 +1,9 @@
 import { Card } from '@/components/ui/card';
 import { ChevronRight } from 'lucide-react';
-import { GuideScreenshot } from './GuideScreenshot';
 
-export const VerificationSection = ({ image }: { image: string }) => (
+export const VerificationSection = () => (
   <div className="space-y-6">
     <h2 className="text-2xl font-bold text-foreground">การตรวจสอบและยืนยันเอกสาร</h2>
-    
-    <GuideScreenshot src={image} alt="หน้าตรวจสอบเอกสาร" caption="ภาพ: หน้าตรวจสอบเอกสารแสดง PDF และข้อมูลสินค้า" />
 
     <Card className="p-6">
       <h3 className="font-semibold mb-4">ขั้นตอนการตรวจสอบ</h3>

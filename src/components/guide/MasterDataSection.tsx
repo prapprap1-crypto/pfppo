@@ -1,12 +1,9 @@
 import { Card } from '@/components/ui/card';
 import { Warehouse, User, Truck, MapPin } from 'lucide-react';
-import { GuideScreenshot } from './GuideScreenshot';
 
-export const MasterDataSection = ({ image }: { image: string }) => (
+export const MasterDataSection = () => (
   <div className="space-y-6">
     <h2 className="text-2xl font-bold text-foreground">การจัดการข้อมูลหลัก (Master Data)</h2>
-
-    <GuideScreenshot src={image} alt="หน้าจัดการข้อมูลหลัก" caption="ภาพ: หน้าจัดการข้อมูลหลักแบบ Tabs" />
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Card className="p-6">
