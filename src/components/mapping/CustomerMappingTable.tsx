@@ -431,6 +431,7 @@ export function CustomerMappingTable({
               <TableHead>ตำแหน่ง</TableHead>
               <TableHead className="text-center">VAT</TableHead>
               <TableHead>ขนส่ง</TableHead>
+              <TableHead>พนักงานขาย</TableHead>
               <TableHead className="text-center">สาขา</TableHead>
               <TableHead className="text-center">สถานะ</TableHead>
               <TableHead className="text-center w-24">การดำเนินการ</TableHead>
@@ -488,6 +489,11 @@ export function CustomerMappingTable({
                           <span title={mapping.transportName}>{mapping.transportCode}</span>
                         ) : '-'}
                       </TableCell>
+                      <TableCell className="text-sm">
+                        {mapping.salespersonCode ? (
+                          <span title={mapping.salespersonName}>{mapping.salespersonCode}</span>
+                        ) : '-'}
+                      </TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline" className="gap-1">
                           <MapPin className="w-3 h-3" />
@@ -507,7 +513,7 @@ export function CustomerMappingTable({
                             onClick={() => openAddBranch(mapping.id)}
                             title="เพิ่มสาขา"
                           >
-                            <Plus className="w-4 h-4 text-green-600" />
+                            <Plus className="w-4 h-4 text-accent" />
                           </Button>
                           <Button 
                             variant="ghost" 
