@@ -27,14 +27,19 @@ export function ExportPanel({ poList }: ExportPanelProps) {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [branch, setBranch] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'VERIFIED' | 'EXPORTED' | 'all'>('VERIFIED');
   const [selectedPOs, setSelectedPOs] = useState<string[]>([]);
   const [exportColumns, setExportColumns] = useState<ExportColumn[]>(DEFAULT_COLUMNS);
 
-  const verifiedPOs = poList.filter(po => po.status === 'VERIFIED');
+  // Filter by status first
+  const exportablePOs = poList.filter(po => {
+    if (statusFilter === 'all') return po.status === 'VERIFIED' || po.status === 'EXPORTED';
+    return po.status === statusFilter;
+  });
   
   const branches = [...new Set(poList.map(po => po.branch))];
 
-  const filteredPOs = verifiedPOs.filter(po => {
+  const filteredPOs = exportablePOs.filter(po => {
     const matchesBranch = branch === 'all' || po.branch === branch;
     const matchesDateFrom = !dateFrom || new Date(po.dueDate) >= new Date(dateFrom);
     const matchesDateTo = !dateTo || new Date(po.dueDate) <= new Date(dateTo);
@@ -171,7 +176,20 @@ export function ExportPanel({ poList }: ExportPanelProps) {
             onColumnsChange={setExportColumns} 
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div>
+            <Label className="mb-2 block">สถานะ</Label>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'VERIFIED' | 'EXPORTED' | 'all')}>
+              <SelectTrigger>
+                <SelectValue placeholder="เลือกสถานะ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="VERIFIED">รอส่งออก</SelectItem>
+                <SelectItem value="EXPORTED">ส่งออกแล้ว</SelectItem>
+                <SelectItem value="all">ทั้งหมด</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div>
             <Label className="flex items-center gap-2 mb-2">
               <Calendar className="w-4 h-4" />
@@ -224,10 +242,15 @@ export function ExportPanel({ poList }: ExportPanelProps) {
       {/* PO Selection */}
       <div className="bg-card rounded-xl border">
         <div className="p-4 border-b flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
             <FileSpreadsheet className="w-5 h-5 text-success" />
             <div>
-              <h3 className="font-semibold">PO พร้อมส่งออก (สถานะ: ตรวจสอบแล้ว/รอส่งออก)</h3>
+              <h3 className="font-semibold">
+                PO พร้อมส่งออก 
+                {statusFilter === 'VERIFIED' && ' (สถานะ: รอส่งออก)'}
+                {statusFilter === 'EXPORTED' && ' (สถานะ: ส่งออกแล้ว)'}
+                {statusFilter === 'all' && ' (ทุกสถานะ)'}
+              </h3>
               <p className="text-sm text-muted-foreground">
                 {filteredPOs.length} รายการ | เลือกแล้ว {selectedPOs.length} รายการ
               </p>
