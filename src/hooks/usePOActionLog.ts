@@ -18,6 +18,7 @@ export interface POActionDetails {
   source_file?: string;
   mapping_type?: string;
   description?: string;
+  changes?: string[];
 }
 
 const ACTION_LABELS: Record<POAction, string> = {
