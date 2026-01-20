@@ -18,7 +18,8 @@ export type ActivityAction =
   | 'customer_mapping_updated'
   | 'customer_mapping_deleted'
   | 'role_changed'
-  | 'user_deleted';
+  | 'user_deleted'
+  | 'user_approved';
 
 export interface ActivityLogEntry {
   action: ActivityAction;
@@ -73,7 +74,8 @@ export const getActionLabel = (action: string): string => {
     customer_mapping_updated: 'อัปเดต Mapping ลูกค้า',
     customer_mapping_deleted: 'ลบ Mapping ลูกค้า',
     role_changed: 'เปลี่ยนบทบาทผู้ใช้',
-    user_deleted: 'ลบผู้ใช้'
+    user_deleted: 'ลบผู้ใช้',
+    user_approved: 'อนุมัติผู้ใช้ใหม่'
   };
   return labels[action] || action;
 };
