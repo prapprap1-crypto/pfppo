@@ -37,6 +37,7 @@ import { Link } from 'react-router-dom';
 import { usePOActionLog } from '@/hooks/usePOActionLog';
 import { POActionHistoryDialog } from './POActionHistoryDialog';
 import { POEditDialog } from './POEditDialog';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface POTableProps {
   poList: POHeader[];
@@ -46,6 +47,7 @@ interface POTableProps {
 export function POTable({ poList, onRefresh }: POTableProps) {
   const { toast } = useToast();
   const { logAction } = usePOActionLog();
+  const { isModerator } = useUserRole();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [customerMappingFilter, setCustomerMappingFilter] = useState<string>('all');
@@ -263,17 +265,19 @@ export function POTable({ poList, onRefresh }: POTableProps) {
                 <TableCell>
                   <div className="flex items-center justify-center gap-1">
                     <POActionHistoryDialog poId={po.id} poNumber={po.poNumber} />
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => {
-                        setEditingPO(po);
-                        setEditDialogOpen(true);
-                      }}
-                      title="แก้ไข"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
+                    {isModerator && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => {
+                          setEditingPO(po);
+                          setEditDialogOpen(true);
+                        }}
+                        title="แก้ไข"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" asChild title="ดูรายละเอียด">
                       <Link to={`/verification/${po.id}`}>
                         <Eye className="w-4 h-4" />
@@ -291,30 +295,32 @@ export function POTable({ poList, onRefresh }: POTableProps) {
                         <Download className="w-4 h-4 text-success" />
                       </Button>
                     )}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title="ลบ">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            คุณต้องการลบ PO {po.poNumber} ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={() => handleDelete(po)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            ลบ
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    {isModerator && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title="ลบ">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              คุณต้องการลบ PO {po.poNumber} ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDelete(po)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              ลบ
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
