@@ -29,6 +29,13 @@ const Export = () => {
             sourceFile: h.source_file,
             createdAt: h.created_at,
             updatedAt: h.updated_at,
+            // Customer mapping fields
+            customerName: h.customer_name,
+            vendorCustomerCode: h.vendor_customer_code,
+            vendorCustomerName: h.vendor_customer_name,
+            isCustomerMapped: h.is_customer_mapped,
+            vendorBranchCode: h.vendor_branch_code,
+            vendorBranchName: h.vendor_branch_name,
           })));
         }
       } catch (error) {
