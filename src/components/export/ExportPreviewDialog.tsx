@@ -102,7 +102,7 @@ const getColumnValue = (item: ExportItem, columnKey: string, index: number): str
     case 'warehouse_name': return item.warehouse_name || '';
     case 'vehicle_position_code': return item.vehicle_position_code || '';
     case 'vehicle_position_name': return item.vehicle_position_name || '';
-    case 'vat_type': return item.vat_type === 1 ? 'Vat' : 'No Vat';
+    case 'vat_type': return item.vat_type === 1 ? 1 : 0;
     case 'transport_code': return item.transport_code || '';
     case 'transport_name': return item.transport_name || '';
     default: return '';
