@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -15,14 +15,18 @@ import {
   Package,
   MapPin,
   Pencil,
-  MessageSquare
+  MessageSquare,
+  Save,
+  X,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { POHeader, POItem } from '@/types/po';
-import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping, updatePOHeader } from '@/lib/api/database';
+import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping, updatePOHeader, updatePOItem } from '@/lib/api/database';
 import { supabase } from '@/integrations/supabase/client';
 import { usePOActionLog } from '@/hooks/usePOActionLog';
+import { useUserRole } from '@/hooks/useUserRole';
 import { PdfViewer } from './PdfViewer';
 import { 
   QuickCustomerMappingDialog, 
@@ -61,6 +65,7 @@ const STATUS_CLASSES: Record<POHeader['status'], string> = {
 export function VerificationView({ po, items, onVerify, onReject }: VerificationViewProps) {
   const { toast } = useToast();
   const { logAction } = usePOActionLog();
+  const { isModerator } = useUserRole();
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [editedItems, setEditedItems] = useState<Record<string, Partial<POItem>>>({});
@@ -70,6 +75,8 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   const [isRefreshingBranch, setIsRefreshingBranch] = useState(false);
   const [localPO, setLocalPO] = useState<POHeader>(po);
   const [remark, setRemark] = useState<string>(po.remark || '');
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [savingItemId, setSavingItemId] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalItems(items);
@@ -113,6 +120,109 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
 
   const getItemValue = (item: POItem, field: keyof POItem) => {
     return editedItems[item.id]?.[field] ?? item[field];
+  };
+
+  const hasItemChanges = (itemId: string) => {
+    return !!editedItems[itemId] && Object.keys(editedItems[itemId]).length > 0;
+  };
+
+  const handleSaveItem = async (item: POItem) => {
+    if (!editedItems[item.id]) return;
+    
+    setSavingItemId(item.id);
+    try {
+      const quantity = Number(getItemValue(item, 'quantity'));
+      const unitPrice = Number(getItemValue(item, 'unitPrice'));
+      const amount = quantity * unitPrice;
+
+      await updatePOItem(item.id, {
+        quantity,
+        unit_price: unitPrice,
+        amount,
+      });
+
+      // Log the edit action
+      const changes: string[] = [];
+      if (editedItems[item.id]?.quantity !== undefined) {
+        changes.push(`จำนวน: ${item.quantity} → ${quantity}`);
+      }
+      if (editedItems[item.id]?.unitPrice !== undefined) {
+        changes.push(`ราคา: ${item.unitPrice} → ${unitPrice}`);
+      }
+
+      await logAction(po.id, 'edited', {
+        description: `แก้ไขรายการสินค้า ${item.customerProductCode}`,
+        changes,
+      });
+
+      // Update local state
+      setLocalItems(prev => prev.map(i => 
+        i.id === item.id 
+          ? { ...i, quantity, unitPrice, amount }
+          : i
+      ));
+
+      // Clear edited state for this item
+      setEditedItems(prev => {
+        const newState = { ...prev };
+        delete newState[item.id];
+        return newState;
+      });
+      setEditingItemId(null);
+
+      // Recalculate totals
+      await recalculateTotals();
+
+      toast({
+        title: "บันทึกสำเร็จ",
+        description: `อัปเดตรายการ ${item.customerProductCode} เรียบร้อย`,
+      });
+    } catch (error) {
+      console.error('Error saving item:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถบันทึกข้อมูลได้",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingItemId(null);
+    }
+  };
+
+  const handleCancelEdit = (itemId: string) => {
+    setEditedItems(prev => {
+      const newState = { ...prev };
+      delete newState[itemId];
+      return newState;
+    });
+    setEditingItemId(null);
+  };
+
+  const recalculateTotals = async () => {
+    // Fetch updated items and recalculate
+    const { data: updatedItems } = await supabase
+      .from('po_items')
+      .select('amount')
+      .eq('po_id', po.id);
+
+    if (updatedItems) {
+      const netTotal = updatedItems.reduce((sum, item) => sum + Number(item.amount), 0);
+      const vat = netTotal * 0.07;
+      const grandTotal = netTotal + vat;
+
+      await updatePOHeader(po.id, {
+        net_total: netTotal,
+        vat,
+        grand_total: grandTotal,
+      });
+
+      setLocalPO(prev => ({
+        ...prev,
+        netTotal,
+        vat,
+        grandTotal,
+      }));
+    }
   };
 
   const handleVerify = async () => {
@@ -578,54 +688,120 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {localItems.map((item, index) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{index + 1}</TableCell>
-                    <TableCell className="font-mono text-sm">{item.customerProductCode}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{item.customerDescription}</TableCell>
-                    <TableCell>
-                      {item.vendorProductCode ? (
-                        <span className="font-mono text-sm text-green-600">{item.vendorProductCode}</span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        value={Number(getItemValue(item, 'quantity'))}
-                        onChange={(e) => handleItemEdit(item.id, 'quantity', Number(e.target.value))}
-                        className="w-20 text-right"
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        value={Number(getItemValue(item, 'unitPrice'))}
-                        onChange={(e) => handleItemEdit(item.id, 'unitPrice', Number(e.target.value))}
-                        className="w-24 text-right"
-                      />
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ฿{formatCurrency(item.amount)}
-                    </TableCell>
-                    <TableCell>
-                      {item.isMapped ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-500" />
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <AlertTriangle className="w-5 h-5 text-yellow-500" />
-                          <QuickProductMappingDialog 
-                            customerCode={item.customerProductCode}
-                            customerDesc={item.customerDescription}
-                            unit={item.unit}
-                            onSuccess={handleRefreshMapping}
+                {localItems.map((item, index) => {
+                  const isEditing = editingItemId === item.id;
+                  const isSaving = savingItemId === item.id;
+                  const hasChanges = hasItemChanges(item.id);
+                  const editedQuantity = Number(getItemValue(item, 'quantity'));
+                  const editedUnitPrice = Number(getItemValue(item, 'unitPrice'));
+                  const calculatedAmount = editedQuantity * editedUnitPrice;
+
+                  return (
+                    <TableRow key={item.id} className={cn(isEditing && "bg-muted/50")}>
+                      <TableCell className="font-medium">{index + 1}</TableCell>
+                      <TableCell className="font-mono text-sm">{item.customerProductCode}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{item.customerDescription}</TableCell>
+                      <TableCell>
+                        {item.vendorProductCode ? (
+                          <span className="font-mono text-sm text-green-600">{item.vendorProductCode}</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isModerator && isEditing ? (
+                          <Input
+                            type="number"
+                            value={editedQuantity}
+                            onChange={(e) => handleItemEdit(item.id, 'quantity', Number(e.target.value))}
+                            className="w-20 text-right"
+                            min={0}
+                            step={1}
                           />
+                        ) : (
+                          <span 
+                            className={cn(
+                              isModerator && "cursor-pointer hover:text-primary",
+                              hasChanges && "text-primary font-semibold"
+                            )}
+                            onClick={() => isModerator && setEditingItemId(item.id)}
+                          >
+                            {editedQuantity}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isModerator && isEditing ? (
+                          <Input
+                            type="number"
+                            value={editedUnitPrice}
+                            onChange={(e) => handleItemEdit(item.id, 'unitPrice', Number(e.target.value))}
+                            className="w-24 text-right"
+                            min={0}
+                            step={0.01}
+                          />
+                        ) : (
+                          <span 
+                            className={cn(
+                              isModerator && "cursor-pointer hover:text-primary",
+                              hasChanges && "text-primary font-semibold"
+                            )}
+                            onClick={() => isModerator && setEditingItemId(item.id)}
+                          >
+                            ฿{formatCurrency(editedUnitPrice)}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        <span className={cn(hasChanges && "text-primary font-semibold")}>
+                          ฿{formatCurrency(hasChanges ? calculatedAmount : item.amount)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {isModerator && isEditing && hasChanges ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-green-600 hover:text-green-700"
+                                onClick={() => handleSaveItem(item)}
+                                disabled={isSaving}
+                              >
+                                {isSaving ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Save className="w-4 h-4" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={() => handleCancelEdit(item.id)}
+                                disabled={isSaving}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </>
+                          ) : item.isMapped ? (
+                            <CheckCircle2 className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <>
+                              <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                              <QuickProductMappingDialog 
+                                customerCode={item.customerProductCode}
+                                customerDesc={item.customerDescription}
+                                unit={item.unit}
+                                onSuccess={handleRefreshMapping}
+                              />
+                            </>
+                          )}
                         </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
