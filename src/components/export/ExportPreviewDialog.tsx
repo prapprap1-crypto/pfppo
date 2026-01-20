@@ -123,7 +123,14 @@ const getColumnValue = (item: ExportItem, columnKey: string, index: number): str
       const year = now.getFullYear() + 543;
       return `${day}/${month}/${year}`;
     }
-    case 'contact_date': return item.due_date;
+    case 'contact_date': {
+      if (!item.due_date) return '';
+      const date = new Date(item.due_date);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
     case 'status': return 'Delivery';
     case 'owner': return item.salesperson_code || '';
     case 'due_date': return item.due_date;
