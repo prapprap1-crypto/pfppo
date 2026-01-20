@@ -164,6 +164,38 @@ export function QuickCustomerMappingDialog({ customerName, onSuccess }: QuickCus
         });
       }
 
+      // Auto-update all PO headers with this customer name that don't have vendor_customer_code yet
+      const { data: posToUpdate, error: fetchError } = await supabase
+        .from('po_headers')
+        .select('id, customer_name')
+        .is('vendor_customer_code', null);
+
+      if (!fetchError && posToUpdate && posToUpdate.length > 0) {
+        // Filter POs that match the customer name (fuzzy or exact)
+        const matchingPOs = posToUpdate.filter(po => 
+          po.customer_name === customerName || 
+          calculateSimilarity(po.customer_name || '', customerName) >= 85
+        );
+
+        if (matchingPOs.length > 0) {
+          const { error: updateError } = await supabase
+            .from('po_headers')
+            .update({
+              vendor_customer_code: vendorCode,
+              vendor_customer_name: vendorName,
+              is_customer_mapped: true,
+            })
+            .in('id', matchingPOs.map(po => po.id));
+
+          if (!updateError) {
+            toast({
+              title: 'อัพเดท PO อัตโนมัติ',
+              description: `อัพเดท ${matchingPOs.length} PO ที่มีลูกค้า "${customerName}"`,
+            });
+          }
+        }
+      }
+
       setOpen(false);
       setVendorCode('');
       setVendorName('');
