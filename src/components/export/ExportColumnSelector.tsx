@@ -65,12 +65,12 @@ export const DEFAULT_COLUMNS: ExportColumn[] = [
   { key: 'branch', label: 'สาขา (Branch)', enabled: false },
   { key: 'amount', label: 'มูลค่า (Amount)', enabled: false },
   // New customer mapping fields
-  { key: 'warehouse_code', label: 'รหัสคลัง (Warehouse Code)', enabled: false },
-  { key: 'warehouse_name', label: 'คลังสินค้า (Warehouse)', enabled: false },
-  { key: 'vehicle_position_code', label: 'รหัสตำแหน่งจัดรถ (Vehicle Position Code)', enabled: false },
-  { key: 'vehicle_position_name', label: 'ตำแหน่งจัดรถ (Vehicle Position)', enabled: false },
-  { key: 'vat_type', label: 'ประเภท VAT', enabled: false },
-  { key: 'transport_code', label: 'รหัสขนส่ง (Transport Code)', enabled: false },
+  { key: 'warehouse_code', label: 'รหัสคลัง (Warehouse Code)', enabled: true },
+  { key: 'warehouse_name', label: 'คลังสินค้า (Warehouse)', enabled: true },
+  { key: 'vehicle_position_code', label: 'รหัสตำแหน่งจัดรถ (Vehicle Position Code)', enabled: true },
+  { key: 'vehicle_position_name', label: 'ตำแหน่งจัดรถ (Vehicle Position)', enabled: true },
+  { key: 'vat_type', label: 'ประเภท VAT', enabled: true },
+  { key: 'transport_code', label: 'รหัสขนส่ง (Transport Code)', enabled: true },
   { key: 'transport_name', label: 'ขนส่ง (Transport)', enabled: false },
 ];
 
