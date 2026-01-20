@@ -18,18 +18,22 @@ import {
   Pencil, 
   RefreshCw,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  User
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { getActionLabel, POAction, POActionDetails } from '@/hooks/usePOActionLog';
+import { getActionLabel, POActionDetails } from '@/hooks/usePOActionLog';
 
 interface ActionLogItem {
   id: string;
   action: string;
   details: POActionDetails | null;
   created_at: string;
+  user_id: string | null;
+  user_name?: string;
+  user_email?: string;
 }
 
 interface POActionHistoryDialogProps {
@@ -58,14 +62,36 @@ export function POActionHistoryDialog({ poId, poNumber }: POActionHistoryDialogP
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // Get unique user IDs
+      const userIds = [...new Set((data || []).map(log => log.user_id).filter(Boolean))] as string[];
+
+      // Fetch profiles for those user IDs
+      let profileMap = new Map<string, { full_name: string | null; email: string | null }>();
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', userIds);
+
+        if (profiles) {
+          profileMap = new Map(profiles.map(p => [p.id, p]));
+        }
+      }
       
-      // Map database response to ActionLogItem
-      const mappedHistory: ActionLogItem[] = (data || []).map(item => ({
-        id: item.id,
-        action: item.action,
-        details: item.details as POActionDetails | null,
-        created_at: item.created_at,
-      }));
+      // Map database response to ActionLogItem with user info
+      const mappedHistory: ActionLogItem[] = (data || []).map(item => {
+        const profile = item.user_id ? profileMap.get(item.user_id) : null;
+        return {
+          id: item.id,
+          action: item.action,
+          details: item.details as POActionDetails | null,
+          created_at: item.created_at,
+          user_id: item.user_id,
+          user_name: profile?.full_name || undefined,
+          user_email: profile?.email || undefined,
+        };
+      });
       
       setHistory(mappedHistory);
     } catch (error) {
@@ -207,6 +233,15 @@ export function POActionHistoryDialog({ poId, poNumber }: POActionHistoryDialogP
                       {format(new Date(item.created_at), 'dd MMM yyyy HH:mm', { locale: th })}
                     </span>
                   </div>
+                  
+                  {/* User info */}
+                  {(item.user_name || item.user_email) && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <User className="w-3 h-3" />
+                      <span>{item.user_name || item.user_email}</span>
+                    </div>
+                  )}
+                  
                   {renderDetails(item)}
                 </div>
               ))}
