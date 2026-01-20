@@ -36,6 +36,7 @@ import {
   EditBranchNameDialog
 } from './QuickMappingDialogs';
 import { EditHistoryDialog } from './EditHistoryDialog';
+import { InlineVendorCodeEditor } from './InlineVendorCodeEditor';
 
 interface VerificationViewProps {
   po: POHeader;
@@ -702,11 +703,18 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                       <TableCell className="font-mono text-sm">{item.customerProductCode}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{item.customerDescription}</TableCell>
                       <TableCell>
-                        {item.vendorProductCode ? (
-                          <span className="font-mono text-sm text-green-600">{item.vendorProductCode}</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                        <InlineVendorCodeEditor
+                          itemId={item.id}
+                          poId={po.id}
+                          customerCode={item.customerProductCode}
+                          customerDesc={item.customerDescription}
+                          currentVendorCode={item.vendorProductCode}
+                          currentVendorDesc={item.vendorDescription}
+                          unit={item.unit}
+                          isMapped={item.isMapped}
+                          canEdit={isModerator}
+                          onSuccess={handleRefreshMapping}
+                        />
                       </TableCell>
                       <TableCell className="text-right">
                         {isModerator && isEditing ? (
