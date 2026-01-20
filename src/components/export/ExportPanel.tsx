@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Calendar, FileSpreadsheet, Filter, CheckCircle2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchPOItems } from '@/lib/api/database';
@@ -287,6 +288,12 @@ export function ExportPanel({ poList }: ExportPanelProps) {
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
                     <p className="font-semibold text-primary">{po.poNumber}</p>
+                    <Badge 
+                      variant={po.status === 'VERIFIED' ? 'default' : 'secondary'}
+                      className={po.status === 'VERIFIED' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600 text-white'}
+                    >
+                      {po.status === 'VERIFIED' ? 'รอส่งออก' : 'ส่งออกแล้ว'}
+                    </Badge>
                     <span className="text-sm text-muted-foreground">|</span>
                     <p className="text-sm">{po.supplierName}</p>
                   </div>
