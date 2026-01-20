@@ -47,35 +47,37 @@ export interface ExportColumn {
   enabled: boolean;
 }
 
+// Export for Express V1 - Default columns
 export const DEFAULT_COLUMNS: ExportColumn[] = [
   { key: 'no', label: 'ลำดับ (No.)', enabled: true },
   { key: 'customer_code', label: 'รหัสลูกค้า (Customer Code)', enabled: true },
   { key: 'customer_name', label: 'ชื่อลูกค้า (Customer Name)', enabled: true },
-  { key: 'memo', label: 'เลขที่ PO (Memo)', enabled: true },
-  { key: 'note', label: 'หมายเหตุ (Note)', enabled: false },
+  { key: 'memo', label: 'Memo (คลัง-ตำแหน่งรถ-VAT-ขนส่ง)', enabled: true },
+  { key: 'note', label: 'Note (หมายเหตุ-รหัสสาขา-เลขที่ PO)', enabled: true },
   { key: 'product_code', label: 'รหัสสินค้า (Product Code)', enabled: true },
   { key: 'product_name', label: 'ชื่อสินค้า (Product)', enabled: true },
   { key: 'quantity', label: 'จำนวน (Unit)', enabled: true },
   { key: 'old_price', label: 'ราคาเดิม (Old Price)', enabled: true },
   { key: 'new_price', label: 'ราคาใหม่ (New Price)', enabled: true },
   { key: 'create_date', label: 'วันที่สร้าง (Create Date)', enabled: true },
+  { key: 'contact_date', label: 'วันครบกำหนด (Contact Date)', enabled: true },
   { key: 'status', label: 'สถานะ (Status)', enabled: true },
-  { key: 'owner', label: 'ผู้รับผิดชอบ (Owner)', enabled: true },
+  { key: 'owner', label: 'พนักงานขาย (Owner)', enabled: true },
+  // Legacy/Optional columns
   { key: 'due_date', label: 'วันครบกำหนด (Due Date)', enabled: false },
   { key: 'branch', label: 'สาขา (Branch)', enabled: false },
   { key: 'amount', label: 'มูลค่า (Amount)', enabled: false },
-  // New customer mapping fields
-  { key: 'vendor_branch_code', label: 'รหัสสาขา (Branch Code)', enabled: true },
-  { key: 'warehouse_code', label: 'รหัสคลัง (Warehouse Code)', enabled: true },
-  { key: 'warehouse_name', label: 'คลังสินค้า (Warehouse)', enabled: true },
-  { key: 'vehicle_position_code', label: 'รหัสตำแหน่งจัดรถ (Vehicle Position Code)', enabled: true },
-  { key: 'vehicle_position_name', label: 'ตำแหน่งจัดรถ (Vehicle Position)', enabled: true },
-  { key: 'vat_type', label: 'ประเภท VAT', enabled: true },
-  { key: 'transport_code', label: 'รหัสขนส่ง (Transport Code)', enabled: true },
+  { key: 'vendor_branch_code', label: 'รหัสสาขา (Branch Code)', enabled: false },
+  { key: 'warehouse_code', label: 'รหัสคลัง (Warehouse Code)', enabled: false },
+  { key: 'warehouse_name', label: 'คลังสินค้า (Warehouse)', enabled: false },
+  { key: 'vehicle_position_code', label: 'รหัสตำแหน่งจัดรถ (Vehicle Position Code)', enabled: false },
+  { key: 'vehicle_position_name', label: 'ตำแหน่งจัดรถ (Vehicle Position)', enabled: false },
+  { key: 'vat_type', label: 'ประเภท VAT', enabled: false },
+  { key: 'transport_code', label: 'รหัสขนส่ง (Transport Code)', enabled: false },
   { key: 'transport_name', label: 'ขนส่ง (Transport)', enabled: false },
-  { key: 'salesperson_code', label: 'รหัสพนักงานขาย (Salesperson Code)', enabled: true },
+  { key: 'salesperson_code', label: 'รหัสพนักงานขาย (Salesperson Code)', enabled: false },
   { key: 'salesperson_name', label: 'พนักงานขาย (Salesperson)', enabled: false },
-  { key: 'remark', label: 'หมายเหตุ (Remark)', enabled: true },
+  { key: 'remark', label: 'หมายเหตุ (Remark)', enabled: false },
 ];
 
 interface ExportTemplate {

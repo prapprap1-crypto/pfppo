@@ -180,6 +180,9 @@ export function ExportPanel({ poList }: ExportPanelProps) {
           salesperson_code: salespersonData?.code || '',
           salesperson_name: salespersonData?.name || '',
           remark: po.remark || '',
+          // Additional customer info
+          vendor_customer_code: po.vendorCustomerCode || '',
+          vendor_customer_name: po.vendorCustomerName || '',
         });
       }
     }
@@ -220,9 +223,8 @@ export function ExportPanel({ poList }: ExportPanelProps) {
       // Use already fetched preview items or fetch new ones
       const allItems = previewItems.length > 0 ? previewItems : await fetchExportItems();
 
-      // Generate Excel file with selected columns
-      const fileName = `C303_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      generateC303Excel(allItems, fileName, exportColumns);
+      // Generate Excel file with selected columns - filename is now auto-generated in the function
+      const generatedFileName = generateC303Excel(allItems, '', exportColumns);
 
       // Update status to EXPORTED for all selected POs
       const { error } = await supabase
@@ -239,12 +241,12 @@ export function ExportPanel({ poList }: ExportPanelProps) {
       await supabase.from('export_history').insert({
         user_id: user?.id,
         exported_pos: selectedPOs,
-        file_name: fileName,
+        file_name: generatedFileName,
       });
 
       toast({
         title: "ส่งออกสำเร็จ",
-        description: `ส่งออก ${selectedPOs.length} รายการเป็น ${fileName} (${exportColumns.filter(c => c.enabled).length} คอลัมน์)`,
+        description: `ส่งออก ${selectedPOs.length} รายการเป็น ${generatedFileName} (${exportColumns.filter(c => c.enabled).length} คอลัมน์)`,
       });
 
       // Clear selection and close preview

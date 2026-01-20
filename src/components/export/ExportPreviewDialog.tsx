@@ -42,6 +42,9 @@ export interface ExportItem {
   salesperson_code?: string;
   salesperson_name?: string;
   remark?: string;
+  // Additional customer info
+  vendor_customer_code?: string;
+  vendor_customer_name?: string;
 }
 
 interface ExportPreviewDialogProps {
@@ -65,12 +68,12 @@ const COLUMN_LABELS: Record<string, string> = {
   old_price: 'Old Price',
   new_price: 'New Price',
   create_date: 'Create Date',
+  contact_date: 'Contact Date',
   status: 'Status',
   owner: 'Owner',
   due_date: 'Due Date',
   branch: 'Branch',
   amount: 'Amount',
-  // Customer mapping fields
   vendor_branch_code: 'Branch Code',
   warehouse_code: 'Warehouse Code',
   warehouse_name: 'Warehouse',
@@ -87,22 +90,45 @@ const COLUMN_LABELS: Record<string, string> = {
 const getColumnValue = (item: ExportItem, columnKey: string, index: number): string | number => {
   switch (columnKey) {
     case 'no': return index + 1;
-    case 'customer_code': return item.supplier_code;
-    case 'customer_name': return item.branch;
-    case 'memo': return item.po_number;
-    case 'note': return '';
+    case 'customer_code': return item.vendor_customer_code || item.supplier_code;
+    case 'customer_name': return item.vendor_customer_name || item.branch;
+    case 'memo': {
+      // Format: WarehouseCode-VehiclePositionCode-VAT-TransportCode
+      const parts = [
+        item.warehouse_code || '',
+        item.vehicle_position_code || '',
+        item.vat_type === 1 ? '1' : '0',
+        item.transport_code || ''
+      ];
+      return parts.join('-');
+    }
+    case 'note': {
+      // Format: Remark-BranchCode-PO_Number
+      const parts = [
+        item.remark || '',
+        item.vendor_branch_code || '',
+        item.po_number
+      ];
+      return parts.join('-');
+    }
     case 'product_code': return item.vendor_product_code || '';
     case 'product_name': return item.vendor_description || '';
     case 'quantity': return item.quantity;
     case 'old_price': return item.unit_price;
     case 'new_price': return item.unit_price;
-    case 'create_date': return new Date().toLocaleDateString('th-TH');
+    case 'create_date': {
+      const now = new Date();
+      const day = now.getDate();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear() + 543;
+      return `${day}/${month}/${year}`;
+    }
+    case 'contact_date': return item.due_date;
     case 'status': return 'Delivery';
-    case 'owner': return 'C303 PFP';
+    case 'owner': return item.salesperson_code || '';
     case 'due_date': return item.due_date;
     case 'branch': return item.branch;
     case 'amount': return item.amount;
-    // Customer mapping fields
     case 'vendor_branch_code': return item.vendor_branch_code || '';
     case 'warehouse_code': return item.warehouse_code || '';
     case 'warehouse_name': return item.warehouse_name || '';
