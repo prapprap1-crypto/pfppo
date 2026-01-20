@@ -39,6 +39,9 @@ export interface ExportItem {
   vat_type?: number;
   transport_code?: string;
   transport_name?: string;
+  salesperson_code?: string;
+  salesperson_name?: string;
+  remark?: string;
 }
 
 interface ExportPreviewDialogProps {
@@ -76,6 +79,9 @@ const COLUMN_LABELS: Record<string, string> = {
   vat_type: 'VAT',
   transport_code: 'Transport Code',
   transport_name: 'Transport',
+  salesperson_code: 'Salesperson Code',
+  salesperson_name: 'Salesperson',
+  remark: 'Remark',
 };
 
 const getColumnValue = (item: ExportItem, columnKey: string, index: number): string | number => {
@@ -105,6 +111,9 @@ const getColumnValue = (item: ExportItem, columnKey: string, index: number): str
     case 'vat_type': return item.vat_type === 1 ? 1 : 0;
     case 'transport_code': return item.transport_code || '';
     case 'transport_name': return item.transport_name || '';
+    case 'salesperson_code': return item.salesperson_code || '';
+    case 'salesperson_name': return item.salesperson_name || '';
+    case 'remark': return item.remark || '';
     default: return '';
   }
 };

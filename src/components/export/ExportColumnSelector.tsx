@@ -73,6 +73,9 @@ export const DEFAULT_COLUMNS: ExportColumn[] = [
   { key: 'vat_type', label: 'ประเภท VAT', enabled: true },
   { key: 'transport_code', label: 'รหัสขนส่ง (Transport Code)', enabled: true },
   { key: 'transport_name', label: 'ขนส่ง (Transport)', enabled: false },
+  { key: 'salesperson_code', label: 'รหัสพนักงานขาย (Salesperson Code)', enabled: true },
+  { key: 'salesperson_name', label: 'พนักงานขาย (Salesperson)', enabled: false },
+  { key: 'remark', label: 'หมายเหตุ (Remark)', enabled: true },
 ];
 
 interface ExportTemplate {

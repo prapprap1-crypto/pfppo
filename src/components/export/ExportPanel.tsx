@@ -83,10 +83,12 @@ export function ExportPanel({ poList }: ExportPanelProps) {
       let vatType = 1;
       let customerMappingId: string | null = null;
       
+      let salespersonData: { code: string; name: string } | null = null;
+      
       if (po.vendorCustomerCode) {
         const { data: customerMapping } = await supabase
           .from('customer_mappings')
-          .select('id, warehouse_id, vehicle_position_id, transport_code_id, vat_type')
+          .select('id, warehouse_id, vehicle_position_id, transport_code_id, vat_type, salesperson_id')
           .eq('vendor_customer_code', po.vendorCustomerCode)
           .maybeSingle();
         
@@ -120,6 +122,15 @@ export function ExportPanel({ poList }: ExportPanelProps) {
               .eq('id', customerMapping.transport_code_id)
               .maybeSingle();
             transportCodeData = tc;
+          }
+          
+          if (customerMapping.salesperson_id) {
+            const { data: sp } = await supabase
+              .from('salespersons')
+              .select('code, name')
+              .eq('id', customerMapping.salesperson_id)
+              .maybeSingle();
+            salespersonData = sp;
           }
         }
       }
@@ -166,6 +177,9 @@ export function ExportPanel({ poList }: ExportPanelProps) {
           vat_type: vatType,
           transport_code: transportCodeData?.code || '',
           transport_name: transportCodeData?.name || '',
+          salesperson_code: salespersonData?.code || '',
+          salesperson_name: salespersonData?.name || '',
+          remark: po.remark || '',
         });
       }
     }
