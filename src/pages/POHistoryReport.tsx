@@ -45,8 +45,11 @@ interface ActionLogWithPO {
   details: POActionDetails | null;
   created_at: string;
   po_id: string;
+  user_id: string | null;
   po_number?: string;
   customer_name?: string;
+  user_name?: string;
+  user_email?: string;
 }
 
 const ACTION_OPTIONS = [
@@ -85,31 +88,49 @@ export default function POHistoryReport() {
 
       if (logsError) throw logsError;
 
-      // Get unique PO IDs
+      // Get unique PO IDs and user IDs
       const poIds = [...new Set((logsData || []).map(log => log.po_id))];
+      const userIds = [...new Set((logsData || []).map(log => log.user_id).filter(Boolean))] as string[];
 
-      // Fetch PO headers for those IDs
-      const { data: poHeaders, error: poError } = await supabase
-        .from('po_headers')
-        .select('id, po_number, customer_name')
-        .in('id', poIds);
+      // Fetch PO headers and profiles in parallel
+      const [poResponse, profilesResponse] = await Promise.all([
+        supabase
+          .from('po_headers')
+          .select('id, po_number, customer_name')
+          .in('id', poIds),
+        userIds.length > 0
+          ? supabase
+              .from('profiles')
+              .select('id, full_name, email')
+              .in('id', userIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
 
-      if (poError) throw poError;
+      if (poResponse.error) throw poResponse.error;
 
-      // Create a map for quick lookup
-      const poMap = new Map(poHeaders?.map(po => [po.id, po]) || []);
+      // Create maps for quick lookup
+      const poMap = new Map(poResponse.data?.map(po => [po.id, po] as const) || []);
+      const profileMap = new Map(
+        (profilesResponse.data as { id: string; full_name: string | null; email: string | null }[] | null)?.map(
+          p => [p.id, p] as const
+        ) || []
+      );
 
       // Merge data
       const mergedLogs: ActionLogWithPO[] = (logsData || []).map(log => {
         const po = poMap.get(log.po_id);
+        const profile = log.user_id ? profileMap.get(log.user_id) : null;
         return {
           id: log.id,
           action: log.action,
           details: log.details as POActionDetails | null,
           created_at: log.created_at,
           po_id: log.po_id,
+          user_id: log.user_id,
           po_number: po?.po_number,
           customer_name: po?.customer_name,
+          user_name: profile?.full_name || undefined,
+          user_email: profile?.email || undefined,
         };
       });
 
@@ -354,20 +375,21 @@ export default function POHistoryReport() {
               <TableHead className="w-[140px]">เลข PO</TableHead>
               <TableHead>ลูกค้า</TableHead>
               <TableHead className="w-[160px]">การดำเนินการ</TableHead>
+              <TableHead className="w-[150px]">ผู้ดำเนินการ</TableHead>
               <TableHead>รายละเอียด</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12">
+                <TableCell colSpan={6} className="text-center py-12">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
                   <p className="mt-2 text-muted-foreground">กำลังโหลด...</p>
                 </TableCell>
               </TableRow>
             ) : filteredLogs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12">
+                <TableCell colSpan={6} className="text-center py-12">
                   <History className="w-12 h-12 mx-auto mb-2 text-muted-foreground/50" />
                   <p className="text-muted-foreground">ไม่พบประวัติการดำเนินการ</p>
                 </TableCell>
@@ -399,6 +421,22 @@ export default function POHistoryReport() {
                       {getActionIcon(log.action)}
                       {getActionLabel(log.action)}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {log.user_name || log.user_email ? (
+                      <div className="text-sm">
+                        <div className="font-medium truncate max-w-[130px]">
+                          {log.user_name || '-'}
+                        </div>
+                        {log.user_email && (
+                          <div className="text-xs text-muted-foreground truncate max-w-[130px]">
+                            {log.user_email}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     {renderDetails(log)}
