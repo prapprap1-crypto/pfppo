@@ -27,7 +27,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Plus, Building2, MapPin, Package, Loader2, Search, Check, Sparkles, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { 
+import { usePOActionLog } from '@/hooks/usePOActionLog';
+import {
   createCustomerMapping, 
   createCustomerBranchMapping, 
   createProductMapping,
@@ -928,6 +929,7 @@ interface EditCustomerNameDialogProps {
 
 export function EditCustomerNameDialog({ poId, currentCustomerName, onSuccess }: EditCustomerNameDialogProps) {
   const { toast } = useToast();
+  const { logAction } = usePOActionLog();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [customerName, setCustomerName] = useState(currentCustomerName);
@@ -1012,6 +1014,13 @@ export function EditCustomerNameDialog({ poId, currentCustomerName, onSuccess }:
       // Save edit history
       await supabase.from('po_edit_history').insert({
         po_id: poId,
+        field_name: 'customer_name',
+        old_value: currentCustomerName,
+        new_value: customerName.trim(),
+      });
+
+      // Log action
+      await logAction(poId, 'edited', {
         field_name: 'customer_name',
         old_value: currentCustomerName,
         new_value: customerName.trim(),
@@ -1128,6 +1137,7 @@ interface EditBranchNameDialogProps {
 
 export function EditBranchNameDialog({ poId, currentBranch, onSuccess }: EditBranchNameDialogProps) {
   const { toast } = useToast();
+  const { logAction } = usePOActionLog();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [branchName, setBranchName] = useState(currentBranch);
@@ -1225,6 +1235,13 @@ export function EditBranchNameDialog({ poId, currentBranch, onSuccess }: EditBra
       // Save edit history
       await supabase.from('po_edit_history').insert({
         po_id: poId,
+        field_name: 'branch',
+        old_value: currentBranch,
+        new_value: branchName.trim(),
+      });
+
+      // Log action
+      await logAction(poId, 'edited', {
         field_name: 'branch',
         old_value: currentBranch,
         new_value: branchName.trim(),
