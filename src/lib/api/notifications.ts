@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 
-export type NotificationType = 'password_changed' | 'login_alert' | 'role_changed' | 'account_approved' | 'custom';
+export type NotificationType = 'password_changed' | 'login_alert' | 'role_changed' | 'account_approved' | 'new_user_pending' | 'custom';
 
 interface SendNotificationParams {
   to: string;
@@ -8,6 +8,7 @@ interface SendNotificationParams {
   type: NotificationType;
   data?: {
     userName?: string;
+    userEmail?: string;
     newRole?: string;
     message?: string;
   };

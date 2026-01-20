@@ -11,9 +11,10 @@ const corsHeaders = {
 interface NotificationEmailRequest {
   to: string;
   subject: string;
-  type: 'password_changed' | 'login_alert' | 'role_changed' | 'custom';
+  type: 'password_changed' | 'login_alert' | 'role_changed' | 'account_approved' | 'new_user_pending' | 'custom';
   data?: {
     userName?: string;
+    userEmail?: string;
     newRole?: string;
     message?: string;
   };
@@ -64,6 +65,44 @@ const getEmailTemplate = (type: string, data: any): string => {
             <h2 style="color: #1f2937; margin-top: 0;">สวัสดี ${userName}</h2>
             <p style="color: #4b5563; line-height: 1.6;">บทบาทของบัญชีคุณได้ถูกเปลี่ยนแปลงเป็น: <strong>${data?.newRole || 'ไม่ระบุ'}</strong></p>
             <p style="color: #4b5563; line-height: 1.6;">หากคุณมีคำถามเกี่ยวกับสิทธิ์ใหม่ กรุณาติดต่อผู้ดูแลระบบ</p>
+          </div>
+        </div>
+      `;
+    
+    case 'account_approved':
+      return `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">✅ บัญชีได้รับการอนุมัติแล้ว</h1>
+          </div>
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <h2 style="color: #1f2937; margin-top: 0;">สวัสดี ${userName}</h2>
+            <p style="color: #4b5563; line-height: 1.6;">ยินดีด้วย! บัญชีของคุณได้รับการอนุมัติจากผู้ดูแลระบบแล้ว</p>
+            <p style="color: #4b5563; line-height: 1.6;">คุณสามารถเข้าสู่ระบบและเริ่มใช้งาน PO System ได้ทันที</p>
+            <div style="text-align: center; margin-top: 30px;">
+              <a href="${Deno.env.get('SITE_URL') || 'https://pfppo.lovable.app'}/auth" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">เข้าสู่ระบบ</a>
+            </div>
+          </div>
+        </div>
+      `;
+    
+    case 'new_user_pending':
+      return `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">🔔 ผู้ใช้ใหม่รอการอนุมัติ</h1>
+          </div>
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <h2 style="color: #1f2937; margin-top: 0;">สวัสดีผู้ดูแลระบบ</h2>
+            <p style="color: #4b5563; line-height: 1.6;">มีผู้ใช้ใหม่ลงทะเบียนและรอการอนุมัติ:</p>
+            <div style="background: #fff; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
+              <p style="color: #1f2937; margin: 5px 0;"><strong>ชื่อ:</strong> ${data?.userName || 'ไม่ระบุ'}</p>
+              <p style="color: #1f2937; margin: 5px 0;"><strong>อีเมล:</strong> ${data?.userEmail || 'ไม่ระบุ'}</p>
+            </div>
+            <p style="color: #4b5563; line-height: 1.6;">กรุณาเข้าสู่ระบบเพื่อตรวจสอบและอนุมัติผู้ใช้</p>
+            <div style="text-align: center; margin-top: 30px;">
+              <a href="${Deno.env.get('SITE_URL') || 'https://pfppo.lovable.app'}/users" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">ไปที่หน้าจัดการผู้ใช้</a>
+            </div>
           </div>
         </div>
       `;
