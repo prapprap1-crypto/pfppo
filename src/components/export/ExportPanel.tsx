@@ -11,13 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar, FileSpreadsheet, Filter, CheckCircle2 } from 'lucide-react';
+import { Calendar, FileSpreadsheet, Filter, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchPOItems } from '@/lib/api/database';
 import { generateC303Excel, ExportColumn } from '@/lib/utils/excel';
 import { ExportColumnSelector, DEFAULT_COLUMNS } from './ExportColumnSelector';
+import { ExportPreviewDialog, ExportItem } from './ExportPreviewDialog';
 
 interface ExportPanelProps {
   poList: POHeader[];
@@ -31,6 +32,10 @@ export function ExportPanel({ poList }: ExportPanelProps) {
   const [statusFilter, setStatusFilter] = useState<'VERIFIED' | 'EXPORTED' | 'all'>('VERIFIED');
   const [selectedPOs, setSelectedPOs] = useState<string[]>([]);
   const [exportColumns, setExportColumns] = useState<ExportColumn[]>(DEFAULT_COLUMNS);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewItems, setPreviewItems] = useState<ExportItem[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
   // Filter by status first
   const exportablePOs = poList.filter(po => {
@@ -63,51 +68,65 @@ export function ExportPanel({ poList }: ExportPanelProps) {
     }
   };
 
-  const handleExport = async () => {
+  const fetchExportItems = async (): Promise<ExportItem[]> => {
+    const allItems: ExportItem[] = [];
+
+    for (const poId of selectedPOs) {
+      const po = filteredPOs.find(p => p.id === poId);
+      if (!po) continue;
+      
+      const items = await fetchPOItems(poId);
+      for (const item of items) {
+        allItems.push({
+          po_number: po.poNumber,
+          due_date: po.dueDate,
+          branch: po.branch,
+          supplier_code: po.supplierCode,
+          vendor_product_code: item.vendor_product_code || '',
+          vendor_description: item.vendor_description || '',
+          quantity: item.quantity,
+          unit: item.unit || 'ลัง',
+          unit_price: item.unit_price,
+          amount: item.amount,
+        });
+      }
+    }
+
+    return allItems;
+  };
+
+  const handlePreview = async () => {
     if (selectedPOs.length === 0) {
       toast({
         title: "กรุณาเลือก PO",
-        description: "เลือกอย่างน้อย 1 รายการเพื่อส่งออก",
+        description: "เลือกอย่างน้อย 1 รายการเพื่อดูตัวอย่าง",
         variant: "destructive",
       });
       return;
     }
 
+    setIsLoadingPreview(true);
     try {
-      // Fetch all items for selected POs
-      const allItems: Array<{
-        po_number: string;
-        due_date: string;
-        branch: string;
-        supplier_code: string;
-        vendor_product_code: string;
-        vendor_description: string;
-        quantity: number;
-        unit: string;
-        unit_price: number;
-        amount: number;
-      }> = [];
+      const items = await fetchExportItems();
+      setPreviewItems(items);
+      setPreviewOpen(true);
+    } catch (error) {
+      console.error('Error loading preview:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถโหลดตัวอย่างได้",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
 
-      for (const poId of selectedPOs) {
-        const po = filteredPOs.find(p => p.id === poId);
-        if (!po) continue;
-        
-        const items = await fetchPOItems(poId);
-        for (const item of items) {
-          allItems.push({
-            po_number: po.poNumber,
-            due_date: po.dueDate,
-            branch: po.branch,
-            supplier_code: po.supplierCode,
-            vendor_product_code: item.vendor_product_code || '',
-            vendor_description: item.vendor_description || '',
-            quantity: item.quantity,
-            unit: item.unit || 'ลัง',
-            unit_price: item.unit_price,
-            amount: item.amount,
-          });
-        }
-      }
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      // Use already fetched preview items or fetch new ones
+      const allItems = previewItems.length > 0 ? previewItems : await fetchExportItems();
 
       // Generate Excel file with selected columns
       const fileName = `C303_${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -136,8 +155,10 @@ export function ExportPanel({ poList }: ExportPanelProps) {
         description: `ส่งออก ${selectedPOs.length} รายการเป็น ${fileName} (${exportColumns.filter(c => c.enabled).length} คอลัมน์)`,
       });
 
-      // Clear selection
+      // Clear selection and close preview
       setSelectedPOs([]);
+      setPreviewItems([]);
+      setPreviewOpen(false);
       
     } catch (error) {
       console.error('Error exporting POs:', error);
@@ -146,6 +167,8 @@ export function ExportPanel({ poList }: ExportPanelProps) {
         description: "ไม่สามารถส่งออกได้",
         variant: "destructive",
       });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -229,12 +252,12 @@ export function ExportPanel({ poList }: ExportPanelProps) {
           </div>
           <div className="flex items-end">
             <Button 
-              onClick={handleExport} 
-              disabled={selectedPOs.length === 0}
+              onClick={handlePreview} 
+              disabled={selectedPOs.length === 0 || isLoadingPreview}
               className="w-full gap-2"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              ยืนยันส่งออก ({selectedPOs.length})
+              <Eye className="w-4 h-4" />
+              {isLoadingPreview ? 'กำลังโหลด...' : `ดูตัวอย่าง (${selectedPOs.length})`}
             </Button>
           </div>
         </div>
@@ -308,6 +331,16 @@ export function ExportPanel({ poList }: ExportPanelProps) {
           )}
         </div>
       </div>
+
+      {/* Preview Dialog */}
+      <ExportPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        items={previewItems}
+        columns={exportColumns}
+        onConfirm={handleExport}
+        isExporting={isExporting}
+      />
     </div>
   );
 }
