@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { POHeader, POItem } from '@/types/po';
 import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping, updatePOHeader } from '@/lib/api/database';
 import { supabase } from '@/integrations/supabase/client';
+import { usePOActionLog } from '@/hooks/usePOActionLog';
 import { PdfViewer } from './PdfViewer';
 import { 
   QuickCustomerMappingDialog, 
@@ -59,6 +60,7 @@ const STATUS_CLASSES: Record<POHeader['status'], string> = {
 
 export function VerificationView({ po, items, onVerify, onReject }: VerificationViewProps) {
   const { toast } = useToast();
+  const { logAction } = usePOActionLog();
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [editedItems, setEditedItems] = useState<Record<string, Partial<POItem>>>({});
@@ -117,6 +119,11 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
     try {
       // Update status to VERIFIED and save remark in database
       await updatePOHeader(po.id, { status: 'VERIFIED', remark: remark || null });
+      
+      // Log verify action
+      await logAction(po.id, 'verified', { 
+        description: `ยืนยันเอกสาร ${po.poNumber}` 
+      });
       
       toast({
         title: "ยืนยันเอกสารสำเร็จ",

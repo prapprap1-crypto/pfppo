@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { createPOHeader, createPOItems, autoCreateMappingsForItems, findMappingsForCodes, findCustomerMappingByName } from '@/lib/api/database';
+import { usePOActionLog } from '@/hooks/usePOActionLog';
 import {
   Dialog,
   DialogContent,
@@ -79,6 +80,7 @@ export function FileUploadZone({
   className 
 }: FileUploadZoneProps) {
   const { toast } = useToast();
+  const { logAction } = usePOActionLog();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState<ExtractedPOData | null>(null);
@@ -215,6 +217,14 @@ export function FileUploadZone({
           source_file: uploadError ? null : filePath,
           status: 'NEED_REVIEW'
         });
+
+        // Log PO import action
+        if (poHeader) {
+          await logAction(poHeader.id, 'imported', { 
+            source_file: file.name,
+            description: `นำเข้าเอกสาร ${extractedData.po_number}`
+          });
+        }
 
         if (poHeader && extractedData.items?.length > 0) {
           // First, fetch existing mappings for all customer codes
