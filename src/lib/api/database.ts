@@ -182,6 +182,7 @@ export async function refreshPOMappings(poId: string) {
 export async function updatePOItem(id: string, updates: Partial<{
   vendor_product_code: string;
   vendor_description: string;
+  customer_description: string;
   quantity: number;
   unit_price: number;
   amount: number;
