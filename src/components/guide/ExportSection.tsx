@@ -1,12 +1,9 @@
 import { Card } from '@/components/ui/card';
 import { ChevronRight } from 'lucide-react';
-import { GuideScreenshot } from './GuideScreenshot';
 
-export const ExportSection = ({ image }: { image: string }) => (
+export const ExportSection = () => (
   <div className="space-y-6">
     <h2 className="text-2xl font-bold text-foreground">การส่งออกไฟล์ Excel</h2>
-
-    <GuideScreenshot src={image} alt="หน้าส่งออก Excel" caption="ภาพ: หน้าจอเลือกคอลัมน์และดูตัวอย่างก่อนส่งออก" />
 
     <Card className="p-6">
       <h3 className="font-semibold mb-4">ขั้นตอนการส่งออก</h3>

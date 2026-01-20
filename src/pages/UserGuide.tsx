@@ -18,12 +18,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Import guide images
-import dashboardUploadImg from '@/assets/guide/dashboard-upload.png';
-import verificationViewImg from '@/assets/guide/verification-view.png';
-import mappingTableImg from '@/assets/guide/mapping-table.png';
-import exportPanelImg from '@/assets/guide/export-panel.png';
-import settingsMasterImg from '@/assets/guide/settings-master.png';
 
 // Import section components
 import { OverviewSection } from '@/components/guide/OverviewSection';
@@ -100,11 +94,11 @@ export default function UserGuide() {
   const renderContent = () => {
     switch (activeSection) {
       case 'overview': return <OverviewSection />;
-      case 'import': return <ImportSection image={dashboardUploadImg} />;
-      case 'verification': return <VerificationSection image={verificationViewImg} />;
-      case 'mapping': return <MappingSection image={mappingTableImg} />;
-      case 'export': return <ExportSection image={exportPanelImg} />;
-      case 'master-data': return <MasterDataSection image={settingsMasterImg} />;
+      case 'import': return <ImportSection />;
+      case 'verification': return <VerificationSection />;
+      case 'mapping': return <MappingSection />;
+      case 'export': return <ExportSection />;
+      case 'master-data': return <MasterDataSection />;
       case 'reports': return <ReportsSection />;
       case 'users': return <UsersSection />;
       default: return <OverviewSection />;
