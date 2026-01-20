@@ -30,6 +30,14 @@ export interface ExportItem {
   unit: string;
   unit_price: number;
   amount: number;
+  // Customer mapping fields
+  warehouse_code?: string;
+  warehouse_name?: string;
+  vehicle_position_code?: string;
+  vehicle_position_name?: string;
+  vat_type?: number;
+  transport_code?: string;
+  transport_name?: string;
 }
 
 interface ExportPreviewDialogProps {
@@ -58,6 +66,14 @@ const COLUMN_LABELS: Record<string, string> = {
   due_date: 'Due Date',
   branch: 'Branch',
   amount: 'Amount',
+  // Customer mapping fields
+  warehouse_code: 'Warehouse Code',
+  warehouse_name: 'Warehouse',
+  vehicle_position_code: 'Vehicle Position Code',
+  vehicle_position_name: 'Vehicle Position',
+  vat_type: 'VAT',
+  transport_code: 'Transport Code',
+  transport_name: 'Transport',
 };
 
 const getColumnValue = (item: ExportItem, columnKey: string, index: number): string | number => {
@@ -78,6 +94,14 @@ const getColumnValue = (item: ExportItem, columnKey: string, index: number): str
     case 'due_date': return item.due_date;
     case 'branch': return item.branch;
     case 'amount': return item.amount;
+    // Customer mapping fields
+    case 'warehouse_code': return item.warehouse_code || '';
+    case 'warehouse_name': return item.warehouse_name || '';
+    case 'vehicle_position_code': return item.vehicle_position_code || '';
+    case 'vehicle_position_name': return item.vehicle_position_name || '';
+    case 'vat_type': return item.vat_type === 1 ? 'Vat' : 'No Vat';
+    case 'transport_code': return item.transport_code || '';
+    case 'transport_name': return item.transport_name || '';
     default: return '';
   }
 };

@@ -75,6 +75,23 @@ export function ExportPanel({ poList }: ExportPanelProps) {
       const po = filteredPOs.find(p => p.id === poId);
       if (!po) continue;
       
+      // Fetch customer mapping data for this PO's customer
+      let mappingData = null;
+      if (po.vendorCustomerCode) {
+        const { data: customerMapping } = await supabase
+          .from('customer_mappings')
+          .select(`
+            *,
+            warehouses:warehouse_id (code, name),
+            vehicle_positions:vehicle_position_id (code, name),
+            transport_codes:transport_code_id (code, name)
+          `)
+          .eq('vendor_customer_code', po.vendorCustomerCode)
+          .maybeSingle();
+        
+        mappingData = customerMapping;
+      }
+      
       const items = await fetchPOItems(poId);
       for (const item of items) {
         allItems.push({
@@ -88,6 +105,14 @@ export function ExportPanel({ poList }: ExportPanelProps) {
           unit: item.unit || 'ลัง',
           unit_price: item.unit_price,
           amount: item.amount,
+          // Customer mapping fields
+          warehouse_code: mappingData?.warehouses?.code || '',
+          warehouse_name: mappingData?.warehouses?.name || '',
+          vehicle_position_code: mappingData?.vehicle_positions?.code || '',
+          vehicle_position_name: mappingData?.vehicle_positions?.name || '',
+          vat_type: mappingData?.vat_type ?? 1,
+          transport_code: mappingData?.transport_codes?.code || '',
+          transport_name: mappingData?.transport_codes?.name || '',
         });
       }
     }
