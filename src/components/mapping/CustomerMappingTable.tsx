@@ -288,14 +288,14 @@ export function CustomerMappingTable({
                       </Link>
                     </div>
                     <Select 
-                      value={formData.warehouseId} 
-                      onValueChange={(value) => setFormData({ ...formData, warehouseId: value })}
+                      value={formData.warehouseId || "__none__"} 
+                      onValueChange={(value) => setFormData({ ...formData, warehouseId: value === "__none__" ? '' : value })}
                     >
                       <SelectTrigger className="bg-background">
                         <SelectValue placeholder="เลือกคลังสินค้า" />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
-                        <SelectItem value="">ไม่ระบุ</SelectItem>
+                        <SelectItem value="__none__">ไม่ระบุ</SelectItem>
                         {warehouses.map(w => (
                           <SelectItem key={w.id} value={w.id}>{w.code} - {w.name}</SelectItem>
                         ))}
@@ -311,14 +311,14 @@ export function CustomerMappingTable({
                       </Link>
                     </div>
                     <Select 
-                      value={formData.vehiclePositionId} 
-                      onValueChange={(value) => setFormData({ ...formData, vehiclePositionId: value })}
+                      value={formData.vehiclePositionId || "__none__"} 
+                      onValueChange={(value) => setFormData({ ...formData, vehiclePositionId: value === "__none__" ? '' : value })}
                     >
                       <SelectTrigger className="bg-background">
                         <SelectValue placeholder="เลือกตำแหน่งจัดรถ" />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
-                        <SelectItem value="">ไม่ระบุ</SelectItem>
+                        <SelectItem value="__none__">ไม่ระบุ</SelectItem>
                         {vehiclePositions.map(v => (
                           <SelectItem key={v.id} value={v.id}>{v.code} - {v.name}</SelectItem>
                         ))}
@@ -352,14 +352,14 @@ export function CustomerMappingTable({
                       </Link>
                     </div>
                     <Select 
-                      value={formData.transportCodeId} 
-                      onValueChange={(value) => setFormData({ ...formData, transportCodeId: value })}
+                      value={formData.transportCodeId || "__none__"} 
+                      onValueChange={(value) => setFormData({ ...formData, transportCodeId: value === "__none__" ? '' : value })}
                     >
                       <SelectTrigger className="bg-background">
                         <SelectValue placeholder="เลือกรหัสขนส่ง" />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
-                        <SelectItem value="">ไม่ระบุ</SelectItem>
+                        <SelectItem value="__none__">ไม่ระบุ</SelectItem>
                         {transportCodes.map(t => (
                           <SelectItem key={t.id} value={t.id}>{t.code} - {t.name}</SelectItem>
                         ))}
