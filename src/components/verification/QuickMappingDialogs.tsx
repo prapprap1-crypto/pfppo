@@ -40,6 +40,7 @@ import {
 } from '@/lib/api/database';
 import { cn } from '@/lib/utils';
 import { calculateSimilarity, findSimilarMatches, getSimilarityColor, type SimilarMatch } from '@/lib/utils/similarity';
+import { supabase } from '@/integrations/supabase/client';
 
 interface VendorProduct {
   id: string;
@@ -393,6 +394,38 @@ export function QuickBranchMappingDialog({ customerName, branch, onSuccess }: Qu
           title: 'เพิ่ม Mapping สาขาสำเร็จ',
           description: `${branch} → ${vendorName}`,
         });
+      }
+
+      // Auto-update all PO headers with this branch that don't have vendor_branch_code yet
+      const { data: posToUpdate, error: fetchError } = await supabase
+        .from('po_headers')
+        .select('id, branch, customer_name')
+        .eq('branch', branch)
+        .is('vendor_branch_code', null);
+
+      if (!fetchError && posToUpdate && posToUpdate.length > 0) {
+        // Filter POs that match the customer name (fuzzy or exact)
+        const matchingPOs = posToUpdate.filter(po => 
+          po.customer_name === customerName || 
+          calculateSimilarity(po.customer_name || '', customerName) >= 85
+        );
+
+        if (matchingPOs.length > 0) {
+          const { error: updateError } = await supabase
+            .from('po_headers')
+            .update({
+              vendor_branch_code: vendorCode,
+              vendor_branch_name: vendorName,
+            })
+            .in('id', matchingPOs.map(po => po.id));
+
+          if (!updateError) {
+            toast({
+              title: 'อัพเดท PO อัตโนมัติ',
+              description: `อัพเดท ${matchingPOs.length} PO ที่มีสาขา "${branch}"`,
+            });
+          }
+        }
       }
 
       setOpen(false);
