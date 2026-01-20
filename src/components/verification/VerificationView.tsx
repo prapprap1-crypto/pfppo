@@ -134,12 +134,14 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
     try {
       const quantity = Number(getItemValue(item, 'quantity'));
       const unitPrice = Number(getItemValue(item, 'unitPrice'));
+      const customerDescription = String(getItemValue(item, 'customerDescription') ?? item.customerDescription);
       const amount = quantity * unitPrice;
 
       await updatePOItem(item.id, {
         quantity,
         unit_price: unitPrice,
         amount,
+        customer_description: customerDescription,
       });
 
       // Log the edit action
@@ -150,6 +152,9 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
       if (editedItems[item.id]?.unitPrice !== undefined) {
         changes.push(`ราคา: ${item.unitPrice} → ${unitPrice}`);
       }
+      if (editedItems[item.id]?.customerDescription !== undefined) {
+        changes.push(`รายละเอียด: ${item.customerDescription} → ${customerDescription}`);
+      }
 
       await logAction(po.id, 'edited', {
         description: `แก้ไขรายการสินค้า ${item.customerProductCode}`,
@@ -159,7 +164,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
       // Update local state
       setLocalItems(prev => prev.map(i => 
         i.id === item.id 
-          ? { ...i, quantity, unitPrice, amount }
+          ? { ...i, quantity, unitPrice, amount, customerDescription }
           : i
       ));
 
@@ -701,7 +706,29 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                     <TableRow key={item.id} className={cn(isEditing && "bg-muted/50")}>
                       <TableCell className="font-medium">{index + 1}</TableCell>
                       <TableCell className="font-mono text-sm">{item.customerProductCode}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{item.customerDescription}</TableCell>
+                      <TableCell className="max-w-[200px]">
+                        {isModerator && isEditing ? (
+                          <Input
+                            type="text"
+                            value={String(getItemValue(item, 'customerDescription') ?? '')}
+                            onChange={(e) => handleItemEdit(item.id, 'customerDescription', e.target.value)}
+                            className="w-full min-w-[150px]"
+                            placeholder="รายละเอียดสินค้า"
+                          />
+                        ) : (
+                          <span 
+                            className={cn(
+                              "truncate block",
+                              isModerator && "cursor-pointer hover:text-primary",
+                              editedItems[item.id]?.customerDescription !== undefined && "text-primary font-semibold"
+                            )}
+                            onClick={() => isModerator && setEditingItemId(item.id)}
+                            title={item.customerDescription}
+                          >
+                            {String(getItemValue(item, 'customerDescription') ?? '-')}
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <InlineVendorCodeEditor
                           itemId={item.id}
