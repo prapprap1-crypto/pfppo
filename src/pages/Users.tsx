@@ -41,7 +41,9 @@ import {
   User as UserIcon,
   MoreHorizontal,
   Trash2,
-  ShieldAlert
+  ShieldAlert,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -57,6 +59,7 @@ interface UserWithRole {
   avatar_url: string | null;
   created_at: string;
   role: 'admin' | 'moderator' | 'user';
+  is_approved: boolean;
 }
 
 export default function Users() {
@@ -72,6 +75,7 @@ export default function Users() {
   const [newRole, setNewRole] = useState<string>('');
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
@@ -114,7 +118,8 @@ export default function Users() {
           full_name: profile.full_name,
           avatar_url: profile.avatar_url,
           created_at: profile.created_at,
-          role: (userRole?.role || 'user') as 'admin' | 'moderator' | 'user'
+          role: (userRole?.role || 'user') as 'admin' | 'moderator' | 'user',
+          is_approved: userRole?.is_approved ?? false
         };
       });
 
@@ -193,18 +198,71 @@ export default function Users() {
     }
   };
 
+  const handleApproveUser = async () => {
+    if (!selectedUser || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ 
+          is_approved: true, 
+          approved_at: new Date().toISOString(),
+          approved_by: user.id 
+        })
+        .eq('user_id', selectedUser.id);
+
+      if (error) throw error;
+
+      await logActivity({
+        action: 'user_approved',
+        entity_type: 'user',
+        entity_id: selectedUser.id,
+        details: { 
+          user_email: selectedUser.email,
+          approved_by: user.email
+        }
+      });
+
+      if (selectedUser.email) {
+        await sendNotificationEmail({
+          to: selectedUser.email,
+          subject: 'บัญชีของคุณได้รับการอนุมัติแล้ว',
+          type: 'account_approved',
+          data: {
+            userName: selectedUser.full_name || selectedUser.email
+          }
+        });
+      }
+
+      toast({
+        title: 'อนุมัติผู้ใช้สำเร็จ',
+        description: `${selectedUser.email} สามารถเข้าใช้งานระบบได้แล้ว`
+      });
+
+      setApproveDialogOpen(false);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error approving user:', error);
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถอนุมัติผู้ใช้ได้',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'admin':
         return (
-          <Badge className="bg-red-500/10 text-red-500 border-red-500/20">
+          <Badge className="bg-destructive/10 text-destructive border-destructive/20">
             <ShieldCheck className="w-3 h-3 mr-1" />
             ผู้ดูแลระบบ
           </Badge>
         );
       case 'moderator':
         return (
-          <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+          <Badge className="bg-accent/10 text-accent-foreground border-accent/20">
             <Shield className="w-3 h-3 mr-1" />
             ผู้ควบคุม
           </Badge>
@@ -217,6 +275,23 @@ export default function Users() {
           </Badge>
         );
     }
+  };
+
+  const getApprovalBadge = (isApproved: boolean) => {
+    if (isApproved) {
+      return (
+        <Badge className="bg-primary/10 text-primary border-primary/20">
+          <CheckCircle className="w-3 h-3 mr-1" />
+          อนุมัติแล้ว
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="border-destructive/50 text-destructive">
+        <XCircle className="w-3 h-3 mr-1" />
+        รออนุมัติ
+      </Badge>
+    );
   };
 
   const filteredUsers = users.filter(u => 
@@ -317,6 +392,7 @@ export default function Users() {
                 <TableHead className="font-semibold">ผู้ใช้งาน</TableHead>
                 <TableHead className="font-semibold">อีเมล</TableHead>
                 <TableHead className="font-semibold">บทบาท</TableHead>
+                <TableHead className="font-semibold">สถานะ</TableHead>
                 <TableHead className="font-semibold">วันที่สร้าง</TableHead>
                 {isAdmin && <TableHead className="font-semibold text-right">จัดการ</TableHead>}
               </TableRow>
@@ -324,7 +400,7 @@ export default function Users() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                       <span className="text-muted-foreground">กำลังโหลด...</span>
@@ -333,7 +409,7 @@ export default function Users() {
                 </TableRow>
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     ไม่พบผู้ใช้งาน
                   </TableCell>
                 </TableRow>
@@ -360,6 +436,7 @@ export default function Users() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{u.email}</TableCell>
                     <TableCell>{getRoleBadge(u.role)}</TableCell>
+                    <TableCell>{getApprovalBadge(u.is_approved)}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(u.created_at).toLocaleDateString('th-TH')}
                     </TableCell>
@@ -372,6 +449,18 @@ export default function Users() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {!u.is_approved && (
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setSelectedUser(u);
+                                  setApproveDialogOpen(true);
+                                }}
+                                className="text-primary focus:text-primary"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                อนุมัติผู้ใช้
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem 
                               onClick={() => {
                                 setSelectedUser(u);
@@ -469,6 +558,25 @@ export default function Users() {
               setDeleteDialogOpen(false);
             }}>
               ลบ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>อนุมัติผู้ใช้</DialogTitle>
+            <DialogDescription>
+              คุณต้องการอนุมัติผู้ใช้ <strong>{selectedUser?.email}</strong> ให้เข้าใช้งานระบบหรือไม่?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
+              ยกเลิก
+            </Button>
+            <Button onClick={handleApproveUser}>
+              อนุมัติ
             </Button>
           </DialogFooter>
         </DialogContent>
