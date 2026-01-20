@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useToast } from '@/hooks/use-toast';
+import { sendNotificationEmail } from '@/lib/api/notifications';
 import { FolderOpen, Mail, Lock, User, Clock, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { z } from 'zod';
 
@@ -160,21 +161,55 @@ const Auth = () => {
     
     setLoading(true);
     
-    const { error } = await supabase.auth.verifyOtp({
+    const { error, data } = await supabase.auth.verifyOtp({
       email: pendingEmail,
       token: otpValue,
       type: 'signup',
     });
     
-    setLoading(false);
-    
     if (error) {
+      setLoading(false);
       toast({
         title: 'ยืนยัน OTP ไม่สำเร็จ',
         description: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ กรุณาลองใหม่',
         variant: 'destructive',
       });
     } else {
+      // Send notification to all admins
+      try {
+        const { data: adminRoles } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'admin');
+        
+        if (adminRoles && adminRoles.length > 0) {
+          const { data: adminProfiles } = await supabase
+            .from('profiles')
+            .select('email')
+            .in('id', adminRoles.map(r => r.user_id));
+          
+          // Send email to each admin
+          if (adminProfiles) {
+            for (const admin of adminProfiles) {
+              if (admin.email) {
+                await sendNotificationEmail({
+                  to: admin.email,
+                  subject: 'ผู้ใช้ใหม่รอการอนุมัติ - PO System',
+                  type: 'new_user_pending',
+                  data: {
+                    userName: fullName || 'ไม่ระบุ',
+                    userEmail: pendingEmail
+                  }
+                });
+              }
+            }
+          }
+        }
+      } catch (notifyError) {
+        console.error('Error notifying admins:', notifyError);
+      }
+      
+      setLoading(false);
       setAuthStep('pending-approval');
       toast({ 
         title: 'ยืนยันอีเมลสำเร็จ',
