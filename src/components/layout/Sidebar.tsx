@@ -12,6 +12,7 @@ import {
   Users,
   UserCircle,
   Activity,
+  ClipboardList,
   Building2,
   PieChart,
   Settings,
@@ -38,6 +39,7 @@ const mainNavItems = [
   { path: '/mapping-dashboard', label: 'สรุป Mapping', icon: PieChart },
   { path: '/export', label: 'ส่งออก Excel', icon: Download },
   { path: '/export-history', label: 'ประวัติส่งออก', icon: History },
+  { path: '/po-history', label: 'ประวัติ PO', icon: ClipboardList },
 ];
 
 const settingsNavItems = [

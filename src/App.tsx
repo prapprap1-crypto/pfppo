@@ -22,6 +22,7 @@ import WarehouseSettings from "./pages/WarehouseSettings";
 import VehiclePositionSettings from "./pages/VehiclePositionSettings";
 import TransportCodeSettings from "./pages/TransportCodeSettings";
 import SalespersonSettings from "./pages/SalespersonSettings";
+import POHistoryReport from "./pages/POHistoryReport";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ function AppRoutes() {
       <Route path="/settings/vehicle-positions" element={<ProtectedRoute><VehiclePositionSettings /></ProtectedRoute>} />
       <Route path="/settings/transport-codes" element={<ProtectedRoute><TransportCodeSettings /></ProtectedRoute>} />
       <Route path="/settings/salespersons" element={<ProtectedRoute><SalespersonSettings /></ProtectedRoute>} />
+      <Route path="/po-history" element={<ProtectedRoute><POHistoryReport /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
