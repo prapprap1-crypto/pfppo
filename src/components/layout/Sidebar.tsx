@@ -16,7 +16,10 @@ import {
   PieChart,
   Settings,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Warehouse,
+  MapPinned,
+  Truck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -39,6 +42,9 @@ const mainNavItems = [
 const settingsNavItems = [
   { path: '/mapping', label: 'Mapping สินค้า', icon: Layers },
   { path: '/customer-mapping', label: 'Mapping ลูกค้า', icon: Building2 },
+  { path: '/settings/warehouses', label: 'คลังสินค้า', icon: Warehouse },
+  { path: '/settings/vehicle-positions', label: 'ตำแหน่งจัดรถ', icon: MapPinned },
+  { path: '/settings/transport-codes', label: 'รหัสขนส่ง', icon: Truck },
   { path: '/activity-log', label: 'ประวัติการใช้งาน', icon: Activity },
   { path: '/users', label: 'จัดการผู้ใช้', icon: Users },
   { path: '/profile', label: 'โปรไฟล์', icon: UserCircle },
