@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Eye, FileCheck, Download, Search, Filter, Trash2, Building2, CheckCircle2, AlertTriangle, MapPin, History } from 'lucide-react';
+import { Eye, FileCheck, Download, Search, Filter, Trash2, Building2, CheckCircle2, AlertTriangle, MapPin, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { usePOActionLog } from '@/hooks/usePOActionLog';
 import { POActionHistoryDialog } from './POActionHistoryDialog';
+import { POEditDialog } from './POEditDialog';
 
 interface POTableProps {
   poList: POHeader[];
@@ -49,6 +50,8 @@ export function POTable({ poList, onRefresh }: POTableProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [customerMappingFilter, setCustomerMappingFilter] = useState<string>('all');
   const [branchMappingFilter, setBranchMappingFilter] = useState<string>('all');
+  const [editingPO, setEditingPO] = useState<POHeader | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const filteredList = poList.filter(po => {
     const matchesSearch = 
@@ -260,26 +263,37 @@ export function POTable({ poList, onRefresh }: POTableProps) {
                 <TableCell>
                   <div className="flex items-center justify-center gap-1">
                     <POActionHistoryDialog poId={po.id} poNumber={po.poNumber} />
-                    <Button variant="ghost" size="icon" asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => {
+                        setEditingPO(po);
+                        setEditDialogOpen(true);
+                      }}
+                      title="แก้ไข"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" asChild title="ดูรายละเอียด">
                       <Link to={`/verification/${po.id}`}>
                         <Eye className="w-4 h-4" />
                       </Link>
                     </Button>
                     {po.status === 'IMPORTED' && (
-                      <Button variant="ghost" size="icon" asChild>
+                      <Button variant="ghost" size="icon" asChild title="ตรวจสอบ">
                         <Link to={`/verification/${po.id}`}>
                           <FileCheck className="w-4 h-4 text-warning" />
                         </Link>
                       </Button>
                     )}
                     {po.status === 'VERIFIED' && (
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" title="ดาวน์โหลด">
                         <Download className="w-4 h-4 text-success" />
                       </Button>
                     )}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title="ลบ">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </AlertDialogTrigger>
@@ -313,6 +327,14 @@ export function POTable({ poList, onRefresh }: POTableProps) {
       <div className="p-4 border-t text-sm text-muted-foreground">
         แสดง {filteredList.length} จาก {poList.length} รายการ
       </div>
+
+      {/* Edit Dialog */}
+      <POEditDialog
+        po={editingPO}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSuccess={onRefresh}
+      />
     </div>
   );
 }
