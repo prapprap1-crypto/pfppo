@@ -22,6 +22,7 @@ export interface POHeader {
   sourceFile: string;
   createdAt: string;
   updatedAt: string;
+  remark?: string;
 }
 
 export interface POItem {
@@ -65,6 +66,9 @@ export interface CustomerMapping {
   transportCodeId?: string;
   transportCode?: string;
   transportName?: string;
+  salespersonId?: string;
+  salespersonCode?: string;
+  salespersonName?: string;
   active: boolean;
   createdAt: string;
   branches?: CustomerBranchMapping[];

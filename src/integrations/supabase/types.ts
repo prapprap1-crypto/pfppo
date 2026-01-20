@@ -94,6 +94,7 @@ export type Database = {
           created_at: string
           customer_name: string
           id: string
+          salesperson_id: string | null
           transport_code_id: string | null
           updated_at: string
           vat_type: number | null
@@ -107,6 +108,7 @@ export type Database = {
           created_at?: string
           customer_name: string
           id?: string
+          salesperson_id?: string | null
           transport_code_id?: string | null
           updated_at?: string
           vat_type?: number | null
@@ -120,6 +122,7 @@ export type Database = {
           created_at?: string
           customer_name?: string
           id?: string
+          salesperson_id?: string | null
           transport_code_id?: string | null
           updated_at?: string
           vat_type?: number | null
@@ -129,6 +132,13 @@ export type Database = {
           warehouse_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "customer_mappings_salesperson_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "salespersons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "customer_mappings_transport_code_id_fkey"
             columns: ["transport_code_id"]
@@ -256,6 +266,7 @@ export type Database = {
           is_customer_mapped: boolean | null
           net_total: number | null
           po_number: string
+          remark: string | null
           source_file: string | null
           status: string
           supplier_code: string
@@ -279,6 +290,7 @@ export type Database = {
           is_customer_mapped?: boolean | null
           net_total?: number | null
           po_number: string
+          remark?: string | null
           source_file?: string | null
           status?: string
           supplier_code: string
@@ -302,6 +314,7 @@ export type Database = {
           is_customer_mapped?: boolean | null
           net_total?: number | null
           po_number?: string
+          remark?: string | null
           source_file?: string | null
           status?: string
           supplier_code?: string
@@ -431,6 +444,33 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      salespersons: {
+        Row: {
+          active: boolean | null
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []

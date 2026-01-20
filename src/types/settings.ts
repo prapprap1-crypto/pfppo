@@ -21,3 +21,11 @@ export interface TransportCode {
   active: boolean;
   createdAt: string;
 }
+
+export interface Salesperson {
+  id: string;
+  code: string;
+  name: string;
+  active: boolean;
+  createdAt: string;
+}

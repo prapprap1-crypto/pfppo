@@ -83,6 +83,7 @@ export async function updatePOHeader(id: string, updates: Partial<{
   branch: string;
   vendor_branch_code: string | null;
   vendor_branch_name: string | null;
+  remark: string | null;
 }>) {
   const { data, error } = await supabase
     .from('po_headers')
@@ -353,7 +354,8 @@ export async function fetchCustomerMappings() {
       *,
       warehouses:warehouse_id(id, code, name),
       vehicle_positions:vehicle_position_id(id, code, name),
-      transport_codes:transport_code_id(id, code, name)
+      transport_codes:transport_code_id(id, code, name),
+      salespersons:salesperson_id(id, code, name)
     `)
     .order('customer_name', { ascending: true });
   
@@ -369,6 +371,7 @@ export async function createCustomerMapping(mapping: {
   vehicle_position_id?: string | null;
   vat_type?: number;
   transport_code_id?: string | null;
+  salesperson_id?: string | null;
   active?: boolean;
 }) {
   const { data, error } = await supabase
@@ -389,6 +392,7 @@ export async function updateCustomerMapping(id: string, updates: Partial<{
   vehicle_position_id: string | null;
   vat_type: number;
   transport_code_id: string | null;
+  salesperson_id: string | null;
   active: boolean;
 }>) {
   const { data, error } = await supabase

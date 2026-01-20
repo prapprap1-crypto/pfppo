@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CustomerMapping, CustomerBranchMapping } from '@/types/po';
-import { Warehouse, VehiclePosition, TransportCode } from '@/types/settings';
+import { Warehouse, VehiclePosition, TransportCode, Salesperson } from '@/types/settings';
 import { 
   Table, 
   TableBody, 
@@ -57,6 +57,7 @@ interface CustomerMappingTableProps {
   warehouses?: Warehouse[];
   vehiclePositions?: VehiclePosition[];
   transportCodes?: TransportCode[];
+  salespersons?: Salesperson[];
 }
 
 export function CustomerMappingTable({ 
@@ -70,6 +71,7 @@ export function CustomerMappingTable({
   warehouses = [],
   vehiclePositions = [],
   transportCodes = [],
+  salespersons = [],
 }: CustomerMappingTableProps) {
   const [deleteTarget, setDeleteTarget] = useState<CustomerMapping | null>(null);
   const [deleteBranchTarget, setDeleteBranchTarget] = useState<CustomerBranchMapping | null>(null);
@@ -87,6 +89,7 @@ export function CustomerMappingTable({
     vehiclePositionId: '',
     vatType: 1,
     transportCodeId: '',
+    salespersonId: '',
     active: true,
   });
 
@@ -132,6 +135,7 @@ export function CustomerMappingTable({
       vehiclePositionId: '',
       vatType: 1,
       transportCodeId: '',
+      salespersonId: '',
       active: true,
     });
   };
@@ -143,6 +147,7 @@ export function CustomerMappingTable({
         warehouseId: formData.warehouseId || undefined,
         vehiclePositionId: formData.vehiclePositionId || undefined,
         transportCodeId: formData.transportCodeId || undefined,
+        salespersonId: formData.salespersonId || undefined,
       });
       setEditingId(null);
     } else {
@@ -151,6 +156,7 @@ export function CustomerMappingTable({
         warehouseId: formData.warehouseId || undefined,
         vehiclePositionId: formData.vehiclePositionId || undefined,
         transportCodeId: formData.transportCodeId || undefined,
+        salespersonId: formData.salespersonId || undefined,
       });
     }
     resetForm();
@@ -166,6 +172,7 @@ export function CustomerMappingTable({
       vehiclePositionId: mapping.vehiclePositionId || '',
       vatType: mapping.vatType ?? 1,
       transportCodeId: mapping.transportCodeId || '',
+      salespersonId: mapping.salespersonId || '',
       active: mapping.active,
     });
     setEditingId(mapping.id);
@@ -366,6 +373,31 @@ export function CustomerMappingTable({
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                
+                {/* Salesperson field */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label>พนักงานขาย</Label>
+                    <Link to="/settings/salespersons" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                      <ExternalLink className="w-3 h-3" />
+                      ตั้งค่า
+                    </Link>
+                  </div>
+                  <Select 
+                    value={formData.salespersonId || "__none__"} 
+                    onValueChange={(value) => setFormData({ ...formData, salespersonId: value === "__none__" ? '' : value })}
+                  >
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="เลือกพนักงานขาย" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      <SelectItem value="__none__">ไม่ระบุ</SelectItem>
+                      {salespersons.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.code} - {s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex items-center gap-3">
