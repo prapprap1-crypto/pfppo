@@ -20,6 +20,9 @@ export interface ExportItem {
   vat_type?: number;
   transport_code?: string;
   transport_name?: string;
+  salesperson_code?: string;
+  salesperson_name?: string;
+  remark?: string;
 }
 
 export interface ExportColumn {
@@ -54,6 +57,9 @@ const COLUMN_MAPPINGS: Record<string, { header: string; width: number; getValue:
   vat_type: { header: 'VAT', width: 8, getValue: (item) => item.vat_type === 1 ? 1 : 0 },
   transport_code: { header: 'Transport Code', width: 15, getValue: (item) => item.transport_code || '' },
   transport_name: { header: 'Transport', width: 20, getValue: (item) => item.transport_name || '' },
+  salesperson_code: { header: 'Salesperson Code', width: 15, getValue: (item) => item.salesperson_code || '' },
+  salesperson_name: { header: 'Salesperson', width: 20, getValue: (item) => item.salesperson_name || '' },
+  remark: { header: 'Remark', width: 30, getValue: (item) => item.remark || '' },
 };
 
 export function generateC303Excel(

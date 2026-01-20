@@ -16,10 +16,11 @@ import {
   fetchVehiclePositions,
   fetchTransportCodes,
 } from '@/lib/api/settings';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { CustomerMapping, CustomerBranchMapping } from '@/types/po';
-import { Warehouse, VehiclePosition, TransportCode } from '@/types/settings';
+import { Warehouse, VehiclePosition, TransportCode, Salesperson } from '@/types/settings';
 
 const CustomerMappingPage = () => {
   const { toast } = useToast();
@@ -29,16 +30,18 @@ const CustomerMappingPage = () => {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [vehiclePositions, setVehiclePositions] = useState<VehiclePosition[]>([]);
   const [transportCodes, setTransportCodes] = useState<TransportCode[]>([]);
+  const [salespersons, setSalespersons] = useState<Salesperson[]>([]);
 
   const loadMappings = async () => {
     try {
       setLoading(true);
-      const [customerData, branchData, warehouseData, positionData, transportData] = await Promise.all([
+      const [customerData, branchData, warehouseData, positionData, transportData, salespersonData] = await Promise.all([
         fetchCustomerMappings(),
         fetchAllCustomerBranchMappings(),
         fetchWarehouses(),
         fetchVehiclePositions(),
         fetchTransportCodes(),
+        supabase.from('salespersons').select('*').eq('active', true).order('code'),
       ]);
       
       // Set options
@@ -64,6 +67,14 @@ const CustomerMappingPage = () => {
         name: t.name,
         active: t.active,
         createdAt: t.created_at,
+      })) || []);
+      
+      setSalespersons(salespersonData?.data?.map((s: any) => ({
+        id: s.id,
+        code: s.code,
+        name: s.name,
+        active: s.active,
+        createdAt: s.created_at,
       })) || []);
       
       if (customerData) {
@@ -126,6 +137,7 @@ const CustomerMappingPage = () => {
         vehicle_position_id: mapping.vehiclePositionId || null,
         vat_type: mapping.vatType ?? 1,
         transport_code_id: mapping.transportCodeId || null,
+        salesperson_id: mapping.salespersonId || null,
         active: mapping.active ?? true,
       });
       
@@ -157,6 +169,7 @@ const CustomerMappingPage = () => {
         vehicle_position_id: mapping.vehiclePositionId || null,
         vat_type: mapping.vatType,
         transport_code_id: mapping.transportCodeId || null,
+        salesperson_id: mapping.salespersonId || null,
         active: mapping.active,
       });
       
@@ -254,6 +267,7 @@ const CustomerMappingPage = () => {
         warehouses={warehouses}
         vehiclePositions={vehiclePositions}
         transportCodes={transportCodes}
+        salespersons={salespersons}
       />
     </MainLayout>
   );

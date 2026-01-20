@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   AlertTriangle, 
   CheckCircle2, 
@@ -13,7 +14,8 @@ import {
   Building2,
   Package,
   MapPin,
-  Pencil
+  Pencil,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +67,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   const [isRefreshingCustomer, setIsRefreshingCustomer] = useState(false);
   const [isRefreshingBranch, setIsRefreshingBranch] = useState(false);
   const [localPO, setLocalPO] = useState<POHeader>(po);
+  const [remark, setRemark] = useState<string>(po.remark || '');
 
   useEffect(() => {
     setLocalItems(items);
@@ -72,6 +75,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
 
   useEffect(() => {
     setLocalPO(po);
+    setRemark(po.remark || '');
   }, [po]);
 
   useEffect(() => {
@@ -111,8 +115,8 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
 
   const handleVerify = async () => {
     try {
-      // Update status to VERIFIED in database
-      await updatePOHeader(po.id, { status: 'VERIFIED' });
+      // Update status to VERIFIED and save remark in database
+      await updatePOHeader(po.id, { status: 'VERIFIED', remark: remark || null });
       
       toast({
         title: "ยืนยันเอกสารสำเร็จ",
@@ -619,6 +623,20 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
             </Table>
           </div>
         </Card>
+      </div>
+
+      {/* Remark Field */}
+      <div className="bg-card rounded-xl border p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <MessageSquare className="w-5 h-5 text-primary" />
+          <h3 className="font-semibold">หมายเหตุ</h3>
+        </div>
+        <Textarea
+          placeholder="กรอกหมายเหตุเพิ่มเติม (ถ้ามี)..."
+          value={remark}
+          onChange={(e) => setRemark(e.target.value)}
+          className="min-h-[80px]"
+        />
       </div>
 
       {/* Action Buttons */}

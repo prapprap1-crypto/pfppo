@@ -19,7 +19,8 @@ import {
   ChevronRight,
   Warehouse,
   MapPinned,
-  Truck
+  Truck,
+  UserCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -45,6 +46,7 @@ const settingsNavItems = [
   { path: '/settings/warehouses', label: 'คลังสินค้า', icon: Warehouse },
   { path: '/settings/vehicle-positions', label: 'ตำแหน่งจัดรถ', icon: MapPinned },
   { path: '/settings/transport-codes', label: 'รหัสขนส่ง', icon: Truck },
+  { path: '/settings/salespersons', label: 'พนักงานขาย', icon: UserCheck },
   { path: '/activity-log', label: 'ประวัติการใช้งาน', icon: Activity },
   { path: '/users', label: 'จัดการผู้ใช้', icon: Users },
   { path: '/profile', label: 'โปรไฟล์', icon: UserCircle },
