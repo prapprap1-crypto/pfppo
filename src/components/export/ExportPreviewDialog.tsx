@@ -31,6 +31,7 @@ export interface ExportItem {
   unit_price: number;
   amount: number;
   // Customer mapping fields
+  vendor_branch_code?: string;
   warehouse_code?: string;
   warehouse_name?: string;
   vehicle_position_code?: string;
@@ -67,6 +68,7 @@ const COLUMN_LABELS: Record<string, string> = {
   branch: 'Branch',
   amount: 'Amount',
   // Customer mapping fields
+  vendor_branch_code: 'Branch Code',
   warehouse_code: 'Warehouse Code',
   warehouse_name: 'Warehouse',
   vehicle_position_code: 'Vehicle Position Code',
@@ -95,6 +97,7 @@ const getColumnValue = (item: ExportItem, columnKey: string, index: number): str
     case 'branch': return item.branch;
     case 'amount': return item.amount;
     // Customer mapping fields
+    case 'vendor_branch_code': return item.vendor_branch_code || '';
     case 'warehouse_code': return item.warehouse_code || '';
     case 'warehouse_name': return item.warehouse_name || '';
     case 'vehicle_position_code': return item.vehicle_position_code || '';

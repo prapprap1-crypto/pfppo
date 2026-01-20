@@ -65,6 +65,7 @@ export const DEFAULT_COLUMNS: ExportColumn[] = [
   { key: 'branch', label: 'สาขา (Branch)', enabled: false },
   { key: 'amount', label: 'มูลค่า (Amount)', enabled: false },
   // New customer mapping fields
+  { key: 'vendor_branch_code', label: 'รหัสสาขา (Branch Code)', enabled: true },
   { key: 'warehouse_code', label: 'รหัสคลัง (Warehouse Code)', enabled: true },
   { key: 'warehouse_name', label: 'คลังสินค้า (Warehouse)', enabled: true },
   { key: 'vehicle_position_code', label: 'รหัสตำแหน่งจัดรถ (Vehicle Position Code)', enabled: true },
