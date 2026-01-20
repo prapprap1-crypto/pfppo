@@ -121,7 +121,14 @@ const COLUMN_MAPPINGS: Record<string, { header: string; width: number; getValue:
   contact_date: { 
     header: 'Contact Date', 
     width: 15, 
-    getValue: (item) => item.due_date 
+    getValue: (item) => {
+      if (!item.due_date) return '';
+      const date = new Date(item.due_date);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
   },
   status: { 
     header: 'Status', 
