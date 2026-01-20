@@ -131,6 +131,8 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
     if (!editedItems[item.id]) return;
     
     setSavingItemId(item.id);
+    const customerProductCodeChanged = editedItems[item.id]?.customerProductCode !== undefined;
+    
     try {
       const quantity = Number(getItemValue(item, 'quantity'));
       const unitPrice = Number(getItemValue(item, 'unitPrice'));
@@ -146,7 +148,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
 
       // Log the edit action
       const changes: string[] = [];
-      if (editedItems[item.id]?.customerProductCode !== undefined) {
+      if (customerProductCodeChanged) {
         changes.push(`รหัสสินค้า: ${item.customerProductCode} → ${customerProductCode}`);
       }
       if (editedItems[item.id]?.quantity !== undefined) {
@@ -181,8 +183,13 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
 
       toast({
         title: "บันทึกสำเร็จ",
-        description: `อัปเดตรายการ ${item.customerProductCode} เรียบร้อย`,
+        description: `อัปเดตรายการ ${customerProductCode} เรียบร้อย`,
       });
+
+      // Auto refresh mapping if customer product code was changed
+      if (customerProductCodeChanged) {
+        await handleRefreshMapping();
+      }
     } catch (error) {
       console.error('Error saving item:', error);
       toast({
