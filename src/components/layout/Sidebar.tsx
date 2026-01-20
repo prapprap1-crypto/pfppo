@@ -36,19 +36,19 @@ const mainNavItems = [
   { path: '/', label: 'แดชบอร์ด', icon: LayoutDashboard },
   { path: '/po-list', label: 'รายการ PO', icon: FileText },
   { path: '/verification', label: 'ตรวจสอบเอกสาร', icon: FileCheck },
-  { path: '/mapping-dashboard', label: 'สรุป Mapping', icon: PieChart },
   { path: '/export', label: 'ส่งออก Excel', icon: Download },
-  { path: '/export-history', label: 'ประวัติส่งออก', icon: History },
-  { path: '/po-history', label: 'ประวัติ PO', icon: ClipboardList },
 ];
 
 const settingsNavItems = [
   { path: '/mapping', label: 'Mapping สินค้า', icon: Layers },
   { path: '/customer-mapping', label: 'Mapping ลูกค้า', icon: Building2 },
+  { path: '/mapping-dashboard', label: 'สรุป Mapping', icon: PieChart },
   { path: '/settings/warehouses', label: 'คลังสินค้า', icon: Warehouse },
   { path: '/settings/vehicle-positions', label: 'ตำแหน่งจัดรถ', icon: MapPinned },
   { path: '/settings/transport-codes', label: 'รหัสขนส่ง', icon: Truck },
   { path: '/settings/salespersons', label: 'พนักงานขาย', icon: UserCheck },
+  { path: '/export-history', label: 'ประวัติส่งออก', icon: History },
+  { path: '/po-history', label: 'ประวัติ PO', icon: ClipboardList },
   { path: '/activity-log', label: 'ประวัติการใช้งาน', icon: Activity },
   { path: '/users', label: 'จัดการผู้ใช้', icon: Users },
   { path: '/profile', label: 'โปรไฟล์', icon: UserCircle },
