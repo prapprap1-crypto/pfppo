@@ -11,6 +11,14 @@ export interface ExportItem {
   unit: string;
   unit_price: number;
   amount: number;
+  // Customer mapping fields
+  warehouse_code?: string;
+  warehouse_name?: string;
+  vehicle_position_code?: string;
+  vehicle_position_name?: string;
+  vat_type?: number;
+  transport_code?: string;
+  transport_name?: string;
 }
 
 export interface ExportColumn {
@@ -36,6 +44,14 @@ const COLUMN_MAPPINGS: Record<string, { header: string; width: number; getValue:
   due_date: { header: 'Due Date', width: 12, getValue: (item) => item.due_date },
   branch: { header: 'Branch', width: 20, getValue: (item) => item.branch },
   amount: { header: 'Amount', width: 12, getValue: (item) => item.amount },
+  // New customer mapping fields
+  warehouse_code: { header: 'Warehouse Code', width: 15, getValue: (item) => item.warehouse_code || '' },
+  warehouse_name: { header: 'Warehouse', width: 20, getValue: (item) => item.warehouse_name || '' },
+  vehicle_position_code: { header: 'Vehicle Position Code', width: 18, getValue: (item) => item.vehicle_position_code || '' },
+  vehicle_position_name: { header: 'Vehicle Position', width: 20, getValue: (item) => item.vehicle_position_name || '' },
+  vat_type: { header: 'VAT', width: 8, getValue: (item) => item.vat_type === 1 ? 'Vat' : 'No Vat' },
+  transport_code: { header: 'Transport Code', width: 15, getValue: (item) => item.transport_code || '' },
+  transport_name: { header: 'Transport', width: 20, getValue: (item) => item.transport_name || '' },
 };
 
 export function generateC303Excel(
