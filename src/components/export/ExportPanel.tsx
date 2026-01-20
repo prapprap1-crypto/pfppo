@@ -75,22 +75,50 @@ export function ExportPanel({ poList }: ExportPanelProps) {
       const po = filteredPOs.find(p => p.id === poId);
       if (!po) continue;
       
-      // Fetch customer mapping data for this PO's customer
-      let mappingData: any = null;
+      // Fetch customer mapping data for this PO's customer with explicit joins
+      let warehouseData: { code: string; name: string } | null = null;
+      let vehiclePositionData: { code: string; name: string } | null = null;
+      let transportCodeData: { code: string; name: string } | null = null;
+      let vatType = 1;
+      
       if (po.vendorCustomerCode) {
         const { data: customerMapping } = await supabase
           .from('customer_mappings')
-          .select(`
-            *,
-            warehouses (code, name),
-            vehicle_positions (code, name),
-            transport_codes (code, name)
-          `)
+          .select('warehouse_id, vehicle_position_id, transport_code_id, vat_type')
           .eq('vendor_customer_code', po.vendorCustomerCode)
           .maybeSingle();
         
-        mappingData = customerMapping;
-        console.log('Customer mapping data for', po.vendorCustomerCode, ':', customerMapping);
+        if (customerMapping) {
+          vatType = customerMapping.vat_type ?? 1;
+          
+          // Fetch related data separately
+          if (customerMapping.warehouse_id) {
+            const { data: wh } = await supabase
+              .from('warehouses')
+              .select('code, name')
+              .eq('id', customerMapping.warehouse_id)
+              .maybeSingle();
+            warehouseData = wh;
+          }
+          
+          if (customerMapping.vehicle_position_id) {
+            const { data: vp } = await supabase
+              .from('vehicle_positions')
+              .select('code, name')
+              .eq('id', customerMapping.vehicle_position_id)
+              .maybeSingle();
+            vehiclePositionData = vp;
+          }
+          
+          if (customerMapping.transport_code_id) {
+            const { data: tc } = await supabase
+              .from('transport_codes')
+              .select('code, name')
+              .eq('id', customerMapping.transport_code_id)
+              .maybeSingle();
+            transportCodeData = tc;
+          }
+        }
       }
       
       const items = await fetchPOItems(poId);
@@ -106,15 +134,15 @@ export function ExportPanel({ poList }: ExportPanelProps) {
           unit: item.unit || 'ลัง',
           unit_price: item.unit_price,
           amount: item.amount,
-          // Customer mapping fields - use vendor_branch_code from PO header
+          // Customer mapping fields
           vendor_branch_code: po.vendorBranchCode || '',
-          warehouse_code: mappingData?.warehouses?.code || '',
-          warehouse_name: mappingData?.warehouses?.name || '',
-          vehicle_position_code: mappingData?.vehicle_positions?.code || '',
-          vehicle_position_name: mappingData?.vehicle_positions?.name || '',
-          vat_type: mappingData?.vat_type ?? 1,
-          transport_code: mappingData?.transport_codes?.code || '',
-          transport_name: mappingData?.transport_codes?.name || '',
+          warehouse_code: warehouseData?.code || '',
+          warehouse_name: warehouseData?.name || '',
+          vehicle_position_code: vehiclePositionData?.code || '',
+          vehicle_position_name: vehiclePositionData?.name || '',
+          vat_type: vatType,
+          transport_code: transportCodeData?.code || '',
+          transport_name: transportCodeData?.name || '',
         });
       }
     }
