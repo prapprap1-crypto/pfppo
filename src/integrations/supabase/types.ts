@@ -216,6 +216,33 @@ export type Database = {
         }
         Relationships: []
       }
+      po_action_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          po_id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          po_id: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          po_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       po_edit_history: {
         Row: {
           created_at: string

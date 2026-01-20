@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Eye, FileCheck, Download, Search, Filter, Trash2, Building2, CheckCircle2, AlertTriangle, MapPin } from 'lucide-react';
+import { Eye, FileCheck, Download, Search, Filter, Trash2, Building2, CheckCircle2, AlertTriangle, MapPin, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -34,6 +34,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { usePOActionLog } from '@/hooks/usePOActionLog';
+import { POActionHistoryDialog } from './POActionHistoryDialog';
 
 interface POTableProps {
   poList: POHeader[];
@@ -42,6 +44,7 @@ interface POTableProps {
 
 export function POTable({ poList, onRefresh }: POTableProps) {
   const { toast } = useToast();
+  const { logAction } = usePOActionLog();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [customerMappingFilter, setCustomerMappingFilter] = useState<string>('all');
@@ -85,7 +88,15 @@ export function POTable({ poList, onRefresh }: POTableProps) {
 
   const handleDelete = async (po: POHeader) => {
     try {
-      // Delete PO items first (cascade)
+      // Log delete action before deletion (since po_id will be invalid after)
+      await logAction(po.id, 'deleted', { 
+        description: `ลบเอกสาร ${po.poNumber}` 
+      });
+
+      // Delete PO action logs first
+      await supabase.from('po_action_logs').delete().eq('po_id', po.id);
+      
+      // Delete PO items (cascade)
       await supabase.from('po_items').delete().eq('po_id', po.id);
       
       // Delete PO header
@@ -248,6 +259,7 @@ export function POTable({ poList, onRefresh }: POTableProps) {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-center gap-1">
+                    <POActionHistoryDialog poId={po.id} poNumber={po.poNumber} />
                     <Button variant="ghost" size="icon" asChild>
                       <Link to={`/verification/${po.id}`}>
                         <Eye className="w-4 h-4" />

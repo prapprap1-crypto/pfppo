@@ -19,6 +19,7 @@ import { fetchPOItems } from '@/lib/api/database';
 import { generateC303Excel, ExportColumn } from '@/lib/utils/excel';
 import { ExportColumnSelector, DEFAULT_COLUMNS } from './ExportColumnSelector';
 import { ExportPreviewDialog, ExportItem } from './ExportPreviewDialog';
+import { usePOActionLog } from '@/hooks/usePOActionLog';
 
 interface ExportPanelProps {
   poList: POHeader[];
@@ -26,6 +27,7 @@ interface ExportPanelProps {
 
 export function ExportPanel({ poList }: ExportPanelProps) {
   const { toast } = useToast();
+  const { logBulkAction } = usePOActionLog();
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [branch, setBranch] = useState('all');
@@ -242,6 +244,12 @@ export function ExportPanel({ poList }: ExportPanelProps) {
         user_id: user?.id,
         exported_pos: selectedPOs,
         file_name: generatedFileName,
+      });
+
+      // Log export action for all exported POs
+      await logBulkAction(selectedPOs, 'exported', { 
+        file_name: generatedFileName,
+        description: `ส่งออก ${selectedPOs.length} รายการ`
       });
 
       toast({
