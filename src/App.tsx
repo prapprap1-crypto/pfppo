@@ -18,6 +18,9 @@ import Profile from "./pages/Profile";
 import ActivityLog from "./pages/ActivityLog";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import WarehouseSettings from "./pages/WarehouseSettings";
+import VehiclePositionSettings from "./pages/VehiclePositionSettings";
+import TransportCodeSettings from "./pages/TransportCodeSettings";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +61,9 @@ function AppRoutes() {
       <Route path="/activity-log" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/settings/warehouses" element={<ProtectedRoute><WarehouseSettings /></ProtectedRoute>} />
+      <Route path="/settings/vehicle-positions" element={<ProtectedRoute><VehiclePositionSettings /></ProtectedRoute>} />
+      <Route path="/settings/transport-codes" element={<ProtectedRoute><TransportCodeSettings /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

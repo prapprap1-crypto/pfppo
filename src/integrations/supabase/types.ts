@@ -94,29 +94,63 @@ export type Database = {
           created_at: string
           customer_name: string
           id: string
+          transport_code_id: string | null
           updated_at: string
+          vat_type: number | null
+          vehicle_position_id: string | null
           vendor_customer_code: string
           vendor_customer_name: string
+          warehouse_id: string | null
         }
         Insert: {
           active?: boolean | null
           created_at?: string
           customer_name: string
           id?: string
+          transport_code_id?: string | null
           updated_at?: string
+          vat_type?: number | null
+          vehicle_position_id?: string | null
           vendor_customer_code: string
           vendor_customer_name: string
+          warehouse_id?: string | null
         }
         Update: {
           active?: boolean | null
           created_at?: string
           customer_name?: string
           id?: string
+          transport_code_id?: string | null
           updated_at?: string
+          vat_type?: number | null
+          vehicle_position_id?: string | null
           vendor_customer_code?: string
           vendor_customer_name?: string
+          warehouse_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customer_mappings_transport_code_id_fkey"
+            columns: ["transport_code_id"]
+            isOneToOne: false
+            referencedRelation: "transport_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_mappings_vehicle_position_id_fkey"
+            columns: ["vehicle_position_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_mappings_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       export_history: {
         Row: {
@@ -401,6 +435,33 @@ export type Database = {
         }
         Relationships: []
       }
+      transport_codes: {
+        Row: {
+          active: boolean | null
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -419,6 +480,60 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vehicle_positions: {
+        Row: {
+          active: boolean | null
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      warehouses: {
+        Row: {
+          active: boolean | null
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }

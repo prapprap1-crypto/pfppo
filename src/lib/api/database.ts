@@ -349,7 +349,12 @@ export async function autoCreateMappingsForItems(items: Array<{
 export async function fetchCustomerMappings() {
   const { data, error } = await supabase
     .from('customer_mappings')
-    .select('*')
+    .select(`
+      *,
+      warehouses:warehouse_id(id, code, name),
+      vehicle_positions:vehicle_position_id(id, code, name),
+      transport_codes:transport_code_id(id, code, name)
+    `)
     .order('customer_name', { ascending: true });
   
   if (error) throw error;
@@ -360,6 +365,10 @@ export async function createCustomerMapping(mapping: {
   customer_name: string;
   vendor_customer_code: string;
   vendor_customer_name: string;
+  warehouse_id?: string | null;
+  vehicle_position_id?: string | null;
+  vat_type?: number;
+  transport_code_id?: string | null;
   active?: boolean;
 }) {
   const { data, error } = await supabase
@@ -376,6 +385,10 @@ export async function updateCustomerMapping(id: string, updates: Partial<{
   customer_name: string;
   vendor_customer_code: string;
   vendor_customer_name: string;
+  warehouse_id: string | null;
+  vehicle_position_id: string | null;
+  vat_type: number;
+  transport_code_id: string | null;
   active: boolean;
 }>) {
   const { data, error } = await supabase
