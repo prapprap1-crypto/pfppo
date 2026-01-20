@@ -12,6 +12,7 @@ export interface ExportItem {
   unit_price: number;
   amount: number;
   // Customer mapping fields
+  vendor_branch_code?: string;
   warehouse_code?: string;
   warehouse_name?: string;
   vehicle_position_code?: string;
@@ -45,6 +46,7 @@ const COLUMN_MAPPINGS: Record<string, { header: string; width: number; getValue:
   branch: { header: 'Branch', width: 20, getValue: (item) => item.branch },
   amount: { header: 'Amount', width: 12, getValue: (item) => item.amount },
   // New customer mapping fields
+  vendor_branch_code: { header: 'Branch Code', width: 15, getValue: (item) => item.vendor_branch_code || '' },
   warehouse_code: { header: 'Warehouse Code', width: 15, getValue: (item) => item.warehouse_code || '' },
   warehouse_name: { header: 'Warehouse', width: 20, getValue: (item) => item.warehouse_name || '' },
   vehicle_position_code: { header: 'Vehicle Position Code', width: 18, getValue: (item) => item.vehicle_position_code || '' },

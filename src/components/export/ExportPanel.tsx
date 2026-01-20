@@ -76,20 +76,21 @@ export function ExportPanel({ poList }: ExportPanelProps) {
       if (!po) continue;
       
       // Fetch customer mapping data for this PO's customer
-      let mappingData = null;
+      let mappingData: any = null;
       if (po.vendorCustomerCode) {
         const { data: customerMapping } = await supabase
           .from('customer_mappings')
           .select(`
             *,
-            warehouses:warehouse_id (code, name),
-            vehicle_positions:vehicle_position_id (code, name),
-            transport_codes:transport_code_id (code, name)
+            warehouses (code, name),
+            vehicle_positions (code, name),
+            transport_codes (code, name)
           `)
           .eq('vendor_customer_code', po.vendorCustomerCode)
           .maybeSingle();
         
         mappingData = customerMapping;
+        console.log('Customer mapping data for', po.vendorCustomerCode, ':', customerMapping);
       }
       
       const items = await fetchPOItems(poId);
@@ -105,7 +106,8 @@ export function ExportPanel({ poList }: ExportPanelProps) {
           unit: item.unit || 'ลัง',
           unit_price: item.unit_price,
           amount: item.amount,
-          // Customer mapping fields
+          // Customer mapping fields - use vendor_branch_code from PO header
+          vendor_branch_code: po.vendorBranchCode || '',
           warehouse_code: mappingData?.warehouses?.code || '',
           warehouse_name: mappingData?.warehouses?.name || '',
           vehicle_position_code: mappingData?.vehicle_positions?.code || '',
