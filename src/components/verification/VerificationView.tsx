@@ -69,6 +69,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   const { isModerator } = useUserRole();
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(true);
   const [editedItems, setEditedItems] = useState<Record<string, Partial<POItem>>>({});
   const [localItems, setLocalItems] = useState<POItem[]>(items);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -90,15 +91,23 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
 
   useEffect(() => {
     const loadPdfUrl = async () => {
+      setPdfLoading(true);
       if (po.sourceFile) {
-        const { data } = await supabase.storage
-          .from('po-files')
-          .createSignedUrl(po.sourceFile, 3600);
-        
-        if (data?.signedUrl) {
-          setPdfUrl(data.signedUrl);
+        try {
+          const { data, error } = await supabase.storage
+            .from('po-files')
+            .createSignedUrl(po.sourceFile, 3600);
+          
+          if (error) {
+            console.error('Error creating signed URL:', error);
+          } else if (data?.signedUrl) {
+            setPdfUrl(data.signedUrl);
+          }
+        } catch (err) {
+          console.error('Error loading PDF URL:', err);
         }
       }
+      setPdfLoading(false);
     };
     loadPdfUrl();
   }, [po.sourceFile]);
@@ -658,7 +667,12 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
             <FileText className="w-5 h-5 text-primary" />
             <h3 className="font-semibold">เอกสาร PDF</h3>
           </div>
-          {pdfUrl ? (
+          {pdfLoading ? (
+            <div className="h-[500px] flex flex-col items-center justify-center bg-muted rounded-lg gap-2">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">กำลังโหลด PDF...</p>
+            </div>
+          ) : pdfUrl ? (
             <PdfViewer url={pdfUrl} />
           ) : (
             <div className="h-[500px] flex items-center justify-center bg-muted rounded-lg">

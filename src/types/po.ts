@@ -19,7 +19,7 @@ export interface POHeader {
   vat: number;
   grandTotal: number;
   status: POStatus;
-  sourceFile: string;
+  sourceFile?: string;
   createdAt: string;
   updatedAt: string;
   remark?: string;
