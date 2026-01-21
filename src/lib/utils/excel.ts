@@ -73,10 +73,21 @@ const COLUMN_MAPPINGS: Record<string, { header: string; width: number; getValue:
     width: 40, 
     getValue: (item, _, isFirstInGroup) => {
       if (!isFirstInGroup) return '';
-      // Format: Remark-BranchCode-PO_Number
+      // Format: Remark-BranchCode-Memo-PO_Number
+      // If Remark or BranchCode is empty, replace with '0'
+      const remarkValue = item.remark && item.remark.trim() !== '' ? item.remark : '0';
+      const branchCodeValue = item.vendor_branch_code && item.vendor_branch_code.trim() !== '' ? item.vendor_branch_code : '0';
+      // Memo format: WarehouseCode-VehiclePositionCode-VAT-TransportCode
+      const memo = [
+        item.warehouse_code || '',
+        item.vehicle_position_code || '',
+        item.vat_type === 1 ? '1' : '0',
+        item.transport_code || ''
+      ].join('-');
       const parts = [
-        item.remark || '',
-        item.vendor_branch_code || '',
+        remarkValue,
+        branchCodeValue,
+        memo,
         item.po_number
       ];
       return parts.join('-');
