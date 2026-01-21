@@ -5,8 +5,11 @@ import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Download, ExternalLink, Mov
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Set up PDF.js worker - use .js instead of .mjs for better browser compatibility
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Set up PDF.js worker using unpkg CDN which is more reliable
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 interface PdfViewerProps {
   url: string;
