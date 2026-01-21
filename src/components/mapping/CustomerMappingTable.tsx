@@ -342,29 +342,6 @@ export function CustomerMappingTable({
                     </Select>
                   </div>
                 </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <Label>พนักงานขาย</Label>
-                    <Link to="/settings/salespersons" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
-                      <ExternalLink className="w-3 h-3" />
-                      ตั้งค่า
-                    </Link>
-                  </div>
-                  <Select 
-                    value={formData.salespersonId || "__none__"} 
-                    onValueChange={(value) => setFormData({ ...formData, salespersonId: value === "__none__" ? '' : value })}
-                  >
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="เลือกพนักงานขาย" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      <SelectItem value="__none__">ไม่ระบุ</SelectItem>
-                      {salespersons.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.code} - {s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
 
                 <div className="flex items-center gap-3">
                   <Switch 
