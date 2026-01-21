@@ -90,7 +90,7 @@ export function ExportPanel({ poList }: ExportPanelProps) {
       if (po.vendorCustomerCode) {
         const { data: customerMapping } = await supabase
           .from('customer_mappings')
-          .select('id, warehouse_id, vehicle_position_id, transport_code_id, vat_type, salesperson_id')
+          .select('id, vat_type, salesperson_id')
           .eq('vendor_customer_code', po.vendorCustomerCode)
           .maybeSingle();
         
@@ -98,34 +98,7 @@ export function ExportPanel({ poList }: ExportPanelProps) {
           customerMappingId = customerMapping.id;
           vatType = customerMapping.vat_type ?? 1;
           
-          // Fetch related data separately
-          if (customerMapping.warehouse_id) {
-            const { data: wh } = await supabase
-              .from('warehouses')
-              .select('code, name')
-              .eq('id', customerMapping.warehouse_id)
-              .maybeSingle();
-            warehouseData = wh;
-          }
-          
-          if (customerMapping.vehicle_position_id) {
-            const { data: vp } = await supabase
-              .from('vehicle_positions')
-              .select('code, name')
-              .eq('id', customerMapping.vehicle_position_id)
-              .maybeSingle();
-            vehiclePositionData = vp;
-          }
-          
-          if (customerMapping.transport_code_id) {
-            const { data: tc } = await supabase
-              .from('transport_codes')
-              .select('code, name')
-              .eq('id', customerMapping.transport_code_id)
-              .maybeSingle();
-            transportCodeData = tc;
-          }
-          
+          // Fetch salesperson from customer mapping
           if (customerMapping.salesperson_id) {
             const { data: sp } = await supabase
               .from('salespersons')
@@ -137,23 +110,53 @@ export function ExportPanel({ poList }: ExportPanelProps) {
         }
       }
       
-      // Fetch branch mapping - first try from po_headers, then from customer_branch_mappings
+      // Fetch branch mapping - warehouse, vehicle_position, transport_code are now on branch level
       let vendorBranchCode = po.vendorBranchCode || '';
       let vendorBranchName = '';
       
-      if (!vendorBranchCode && customerMappingId && po.branch) {
+      if (customerMappingId && po.branch) {
         // Try to find branch mapping from customer_branch_mappings table
         const { data: branchMapping } = await supabase
           .from('customer_branch_mappings')
-          .select('vendor_branch_code, vendor_branch_name')
+          .select('vendor_branch_code, vendor_branch_name, warehouse_id, vehicle_position_id, transport_code_id')
           .eq('customer_mapping_id', customerMappingId)
           .eq('branch', po.branch)
           .eq('active', true)
           .maybeSingle();
         
         if (branchMapping) {
-          vendorBranchCode = branchMapping.vendor_branch_code || '';
-          vendorBranchName = branchMapping.vendor_branch_name || '';
+          if (!vendorBranchCode) {
+            vendorBranchCode = branchMapping.vendor_branch_code || '';
+            vendorBranchName = branchMapping.vendor_branch_name || '';
+          }
+          
+          // Fetch warehouse, vehicle position, transport code from branch mapping
+          if (branchMapping.warehouse_id) {
+            const { data: wh } = await supabase
+              .from('warehouses')
+              .select('code, name')
+              .eq('id', branchMapping.warehouse_id)
+              .maybeSingle();
+            warehouseData = wh;
+          }
+          
+          if (branchMapping.vehicle_position_id) {
+            const { data: vp } = await supabase
+              .from('vehicle_positions')
+              .select('code, name')
+              .eq('id', branchMapping.vehicle_position_id)
+              .maybeSingle();
+            vehiclePositionData = vp;
+          }
+          
+          if (branchMapping.transport_code_id) {
+            const { data: tc } = await supabase
+              .from('transport_codes')
+              .select('code, name')
+              .eq('id', branchMapping.transport_code_id)
+              .maybeSingle();
+            transportCodeData = tc;
+          }
         }
       }
       
