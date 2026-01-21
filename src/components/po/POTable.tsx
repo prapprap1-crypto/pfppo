@@ -194,7 +194,6 @@ export function POTable({ poList, onRefresh }: POTableProps) {
           <TableHeader>
             <TableRow className="table-header">
               <TableHead className="w-36">เลข PO</TableHead>
-              <TableHead>ผู้จำหน่าย</TableHead>
               <TableHead>ลูกค้า</TableHead>
               <TableHead>สาขา</TableHead>
               <TableHead className="text-center">วันครบกำหนด</TableHead>
@@ -213,12 +212,6 @@ export function POTable({ poList, onRefresh }: POTableProps) {
               >
                 <TableCell className="font-medium text-primary">
                   {po.poNumber}
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <p className="font-medium">{po.supplierName}</p>
-                    <p className="text-xs text-muted-foreground">{po.supplierCode}</p>
-                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
