@@ -74,9 +74,8 @@ const COLUMN_MAPPINGS: Record<string, { header: string; width: number; getValue:
     getValue: (item, _, isFirstInGroup) => {
       if (!isFirstInGroup) return '';
       // Format: Remark-BranchCode-Memo-PO_Number
-      // If Remark or BranchCode is empty, replace with '0'
+      // If Remark is empty, replace with '0'
       const remarkValue = item.remark && item.remark.trim() !== '' ? item.remark : '0';
-      const branchCodeValue = item.vendor_branch_code && item.vendor_branch_code.trim() !== '' ? item.vendor_branch_code : '0';
       // Memo format: WarehouseCode-VehiclePositionCode-VAT-TransportCode
       const memo = [
         item.warehouse_code || '',
@@ -86,7 +85,7 @@ const COLUMN_MAPPINGS: Record<string, { header: string; width: number; getValue:
       ].join('-');
       const parts = [
         remarkValue,
-        branchCodeValue,
+        item.vendor_branch_code || '',
         memo,
         item.po_number
       ];
