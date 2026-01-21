@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { POHeader, STATUS_LABELS, STATUS_CLASSES } from '@/types/po';
 import { 
   Table, 
@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Eye, FileCheck, Download, Search, Filter, Trash2, Building2, CheckCircle2, AlertTriangle, MapPin, Pencil, User } from 'lucide-react';
+import { Eye, FileCheck, Download, Search, Filter, Trash2, Building2, CheckCircle2, AlertTriangle, MapPin, Pencil, User, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -44,6 +44,9 @@ interface POTableProps {
   onRefresh?: () => void;
 }
 
+type SortField = 'poNumber' | 'customerName' | 'branch' | 'dueDate' | 'grandTotal' | 'status' | 'createdAt';
+type SortDirection = 'asc' | 'desc';
+
 export function POTable({ poList, onRefresh }: POTableProps) {
   const { toast } = useToast();
   const { logAction } = usePOActionLog();
@@ -54,28 +57,78 @@ export function POTable({ poList, onRefresh }: POTableProps) {
   const [branchMappingFilter, setBranchMappingFilter] = useState<string>('all');
   const [editingPO, setEditingPO] = useState<POHeader | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('createdAt');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
-  const filteredList = poList.filter(po => {
-    const matchesSearch = 
-      po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.branch.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (po.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
-    
-    const matchesStatus = statusFilter === 'all' || po.status === statusFilter;
-    
-    const matchesCustomerMapping = 
-      customerMappingFilter === 'all' || 
-      (customerMappingFilter === 'mapped' && po.isCustomerMapped) ||
-      (customerMappingFilter === 'unmapped' && !po.isCustomerMapped);
-    
-    const matchesBranchMapping = 
-      branchMappingFilter === 'all' || 
-      (branchMappingFilter === 'mapped' && po.isBranchMapped) ||
-      (branchMappingFilter === 'unmapped' && !po.isBranchMapped);
-    
-    return matchesSearch && matchesStatus && matchesCustomerMapping && matchesBranchMapping;
-  });
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />;
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="w-4 h-4 ml-1" />
+      : <ArrowDown className="w-4 h-4 ml-1" />;
+  };
+
+  const filteredAndSortedList = useMemo(() => {
+    const filtered = poList.filter(po => {
+      const matchesSearch = 
+        po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        po.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        po.branch.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (po.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+      
+      const matchesStatus = statusFilter === 'all' || po.status === statusFilter;
+      
+      const matchesCustomerMapping = 
+        customerMappingFilter === 'all' || 
+        (customerMappingFilter === 'mapped' && po.isCustomerMapped) ||
+        (customerMappingFilter === 'unmapped' && !po.isCustomerMapped);
+      
+      const matchesBranchMapping = 
+        branchMappingFilter === 'all' || 
+        (branchMappingFilter === 'mapped' && po.isBranchMapped) ||
+        (branchMappingFilter === 'unmapped' && !po.isBranchMapped);
+      
+      return matchesSearch && matchesStatus && matchesCustomerMapping && matchesBranchMapping;
+    });
+
+    return filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case 'poNumber':
+          comparison = a.poNumber.localeCompare(b.poNumber, 'th');
+          break;
+        case 'customerName':
+          comparison = (a.customerName || '').localeCompare(b.customerName || '', 'th');
+          break;
+        case 'branch':
+          comparison = a.branch.localeCompare(b.branch, 'th');
+          break;
+        case 'dueDate':
+          comparison = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+          break;
+        case 'grandTotal':
+          comparison = a.grandTotal - b.grandTotal;
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case 'createdAt':
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [poList, searchTerm, statusFilter, customerMappingFilter, branchMappingFilter, sortField, sortDirection]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('th-TH', {
@@ -193,18 +246,60 @@ export function POTable({ poList, onRefresh }: POTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="table-header">
-              <TableHead className="w-36">เลข PO</TableHead>
-              <TableHead>ลูกค้า</TableHead>
-              <TableHead>สาขา</TableHead>
-              <TableHead className="text-center">วันครบกำหนด</TableHead>
-              <TableHead className="text-right">มูลค่ารวม</TableHead>
+              <TableHead className="w-36">
+                <button 
+                  onClick={() => handleSort('poNumber')} 
+                  className="flex items-center hover:text-foreground transition-colors"
+                >
+                  เลข PO {getSortIcon('poNumber')}
+                </button>
+              </TableHead>
+              <TableHead>
+                <button 
+                  onClick={() => handleSort('customerName')} 
+                  className="flex items-center hover:text-foreground transition-colors"
+                >
+                  ลูกค้า {getSortIcon('customerName')}
+                </button>
+              </TableHead>
+              <TableHead>
+                <button 
+                  onClick={() => handleSort('branch')} 
+                  className="flex items-center hover:text-foreground transition-colors"
+                >
+                  สาขา {getSortIcon('branch')}
+                </button>
+              </TableHead>
+              <TableHead className="text-center">
+                <button 
+                  onClick={() => handleSort('dueDate')} 
+                  className="flex items-center justify-center hover:text-foreground transition-colors w-full"
+                >
+                  วันครบกำหนด {getSortIcon('dueDate')}
+                </button>
+              </TableHead>
+              <TableHead className="text-right">
+                <button 
+                  onClick={() => handleSort('grandTotal')} 
+                  className="flex items-center justify-end hover:text-foreground transition-colors w-full"
+                >
+                  มูลค่ารวม {getSortIcon('grandTotal')}
+                </button>
+              </TableHead>
               <TableHead>ผู้อัปโหลด</TableHead>
-              <TableHead className="text-center">สถานะ</TableHead>
+              <TableHead className="text-center">
+                <button 
+                  onClick={() => handleSort('status')} 
+                  className="flex items-center justify-center hover:text-foreground transition-colors w-full"
+                >
+                  สถานะ {getSortIcon('status')}
+                </button>
+              </TableHead>
               <TableHead className="text-center w-36">การดำเนินการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredList.map((po, index) => (
+            {filteredAndSortedList.map((po, index) => (
               <TableRow 
                 key={po.id}
                 className="animate-fade-in hover:bg-muted/30"
@@ -335,7 +430,7 @@ export function POTable({ poList, onRefresh }: POTableProps) {
 
       {/* Pagination Info */}
       <div className="p-4 border-t text-sm text-muted-foreground">
-        แสดง {filteredList.length} จาก {poList.length} รายการ
+        แสดง {filteredAndSortedList.length} จาก {poList.length} รายการ
       </div>
 
       {/* Edit Dialog */}
