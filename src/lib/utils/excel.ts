@@ -86,8 +86,7 @@ const COLUMN_MAPPINGS: Record<string, { header: string; width: number; getValue:
       const parts = [
         remarkValue,
         item.vendor_branch_code || '',
-        memo,
-        item.po_number
+        memo + item.po_number
       ];
       return parts.join('-');
     }
