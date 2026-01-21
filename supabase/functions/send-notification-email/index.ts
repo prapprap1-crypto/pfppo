@@ -135,6 +135,22 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log(`Sending ${type} email to: ${to}`);
 
+    // Check if RESEND_API_KEY is configured
+    if (!RESEND_API_KEY) {
+      console.warn("RESEND_API_KEY is not configured. Skipping email send.");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          skipped: true,
+          message: "Email sending is not configured" 
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     const html = getEmailTemplate(type, data);
 
     // Send email using Resend API
@@ -156,12 +172,41 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!emailResponse.ok) {
       console.error("Error from Resend API:", responseData);
-      throw new Error(responseData.message || "Failed to send email");
+      
+      // If it's a domain verification error, return success with warning
+      // This allows the main operation to complete even if email fails
+      if (responseData.statusCode === 403 && responseData.message?.includes("verify a domain")) {
+        console.warn("Domain not verified for Resend. Email not sent, but operation continues.");
+        return new Response(
+          JSON.stringify({ 
+            success: false,
+            skipped: true,
+            message: "กรุณายืนยันโดเมนที่ resend.com/domains เพื่อส่งอีเมลแจ้งเตือน",
+            details: responseData.message
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+      
+      // For other errors, still return 200 to not break the main flow
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: responseData.message || "Failed to send email" 
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
     }
 
     console.log("Email sent successfully:", responseData);
 
-    return new Response(JSON.stringify(responseData), {
+    return new Response(JSON.stringify({ success: true, ...responseData }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
@@ -170,10 +215,11 @@ const handler = async (req: Request): Promise<Response> => {
     });
   } catch (error: any) {
     console.error("Error in send-notification-email function:", error);
+    // Return 200 with error info to not break the main operation
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ success: false, error: error.message }),
       {
-        status: 500,
+        status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
