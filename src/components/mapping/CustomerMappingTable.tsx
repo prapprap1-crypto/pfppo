@@ -347,6 +347,7 @@ export function CustomerMappingTable({
                       <SelectContent className="bg-background z-50">
                         <SelectItem value="1">VAT (1)</SelectItem>
                         <SelectItem value="0">No VAT (0)</SelectItem>
+                        <SelectItem value="2">Exclude VAT (2)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
