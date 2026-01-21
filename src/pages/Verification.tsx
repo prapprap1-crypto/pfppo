@@ -67,6 +67,7 @@ const Verification = () => {
           vendorBranchCode: branchMappingResult?.branchMapping?.vendor_branch_code || undefined,
           vendorBranchName: branchMappingResult?.branchMapping?.vendor_branch_name || undefined,
           isBranchMapped: !!(branchMappingResult?.branchMapping?.vendor_branch_code),
+          remark: poData.remark || undefined,
         };
         setPo(mappedPO);
 
