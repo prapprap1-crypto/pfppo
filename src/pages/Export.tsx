@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ExportPanel } from '@/components/export/ExportPanel';
-import { mockPOHeaders } from '@/data/mockData';
 import { fetchPOHeaders } from '@/lib/api/database';
 import { POHeader } from '@/types/po';
 
 const Export = () => {
-  const [poList, setPOList] = useState<POHeader[]>(mockPOHeaders);
+  const [poList, setPOList] = useState<POHeader[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,7 +39,7 @@ const Export = () => {
           })));
         }
       } catch (error) {
-        console.log('Using mock data:', error);
+        console.error('Failed to load data:', error);
       } finally {
         setLoading(false);
       }

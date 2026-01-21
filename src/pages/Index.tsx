@@ -5,16 +5,25 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { RecentPOList } from '@/components/dashboard/RecentPOList';
 import { StatusChart } from '@/components/dashboard/StatusChart';
 import { FileUploadZone } from '@/components/upload/FileUploadZone';
-import { mockPOHeaders, mockDashboardStats } from '@/data/mockData';
 import { fetchPOHeaders, fetchDashboardStats } from '@/lib/api/database';
 import { FileText, FileCheck, AlertTriangle, Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { POHeader, DashboardStats } from '@/types/po';
 
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [poHeaders, setPOHeaders] = useState(mockPOHeaders);
-  const [stats, setStats] = useState(mockDashboardStats);
+  const [poHeaders, setPOHeaders] = useState<POHeader[]>([]);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalPOs: 0,
+    newPOs: 0,
+    importedPOs: 0,
+    needReviewPOs: 0,
+    verifiedPOs: 0,
+    exportedPOs: 0,
+    errorPOs: 0,
+    unmappedProducts: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   const handleUploadComplete = () => {
@@ -56,7 +65,7 @@ const Index = () => {
         setStats(dashStats as any);
       }
     } catch (error) {
-      console.log('Using mock data:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
