@@ -74,8 +74,10 @@ const COLUMN_MAPPINGS: Record<string, { header: string; width: number; getValue:
     getValue: (item, _, isFirstInGroup) => {
       if (!isFirstInGroup) return '';
       // Format: Remark-BranchCode-PO_Number
+      // If Remark is empty or whitespace, replace with '0'
+      const remarkValue = item.remark && item.remark.trim() !== '' ? item.remark : '0';
       const parts = [
-        item.remark || '',
+        remarkValue,
         item.vendor_branch_code || '',
         item.po_number
       ];
