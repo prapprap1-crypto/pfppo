@@ -23,6 +23,9 @@ export interface POHeader {
   createdAt: string;
   updatedAt: string;
   remark?: string;
+  userId?: string;
+  uploaderName?: string;
+  uploaderEmail?: string;
 }
 
 export interface POItem {
