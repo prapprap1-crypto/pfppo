@@ -660,29 +660,31 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
       </div>
 
       {/* Split View: PDF + Items */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ minHeight: '700px' }}>
         {/* PDF Preview */}
-        <Card className="p-4">
+        <Card className="p-4 flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <FileText className="w-5 h-5 text-primary" />
             <h3 className="font-semibold">เอกสาร PDF</h3>
           </div>
           {pdfLoading ? (
-            <div className="h-[500px] flex flex-col items-center justify-center bg-muted rounded-lg gap-2">
+            <div className="flex-1 flex flex-col items-center justify-center bg-muted rounded-lg gap-2">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <p className="text-muted-foreground">กำลังโหลด PDF...</p>
             </div>
           ) : pdfUrl ? (
-            <PdfViewer url={pdfUrl} />
+            <div className="flex-1 min-h-0">
+              <PdfViewer url={pdfUrl} />
+            </div>
           ) : (
-            <div className="h-[500px] flex items-center justify-center bg-muted rounded-lg">
+            <div className="flex-1 flex items-center justify-center bg-muted rounded-lg">
               <p className="text-muted-foreground">ไม่มีไฟล์ PDF</p>
             </div>
           )}
         </Card>
 
         {/* Items Table */}
-        <Card className="p-4">
+        <Card className="p-4 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Package className="w-5 h-5 text-primary" />
@@ -700,7 +702,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
             </Button>
           </div>
           
-          <div className="overflow-auto max-h-[500px]">
+          <div className="overflow-auto flex-1">
             <Table>
               <TableHeader>
                 <TableRow>
