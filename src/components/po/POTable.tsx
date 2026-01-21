@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Eye, FileCheck, Download, Search, Filter, Trash2, Building2, CheckCircle2, AlertTriangle, MapPin, Pencil } from 'lucide-react';
+import { Eye, FileCheck, Download, Search, Filter, Trash2, Building2, CheckCircle2, AlertTriangle, MapPin, Pencil, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -199,6 +199,7 @@ export function POTable({ poList, onRefresh }: POTableProps) {
               <TableHead>สาขา</TableHead>
               <TableHead className="text-center">วันครบกำหนด</TableHead>
               <TableHead className="text-right">มูลค่ารวม</TableHead>
+              <TableHead>ผู้อัปโหลด</TableHead>
               <TableHead className="text-center">สถานะ</TableHead>
               <TableHead className="text-center w-36">การดำเนินการ</TableHead>
             </TableRow>
@@ -256,6 +257,16 @@ export function POTable({ poList, onRefresh }: POTableProps) {
                 </TableCell>
                 <TableCell className="text-right font-semibold">
                   ฿{formatCurrency(po.grandTotal)}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    <div className="text-sm">
+                      <p className="font-medium truncate max-w-32" title={po.uploaderName || po.uploaderEmail || '-'}>
+                        {po.uploaderName || po.uploaderEmail || '-'}
+                      </p>
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell className="text-center">
                   <span className={cn('status-badge', STATUS_CLASSES[po.status])}>

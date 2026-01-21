@@ -20,7 +20,26 @@ const POList = () => {
     try {
       const headers = await fetchPOHeaders();
       
-      // Map headers with branch mapping data
+      // Get unique user IDs to fetch profiles
+      const userIds = [...new Set((headers || []).map((h: any) => h.user_id).filter(Boolean))];
+      
+      // Fetch profiles for all users
+      let profilesMap: Record<string, { full_name: string | null; email: string | null }> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', userIds);
+        
+        if (profiles) {
+          profilesMap = profiles.reduce((acc, p) => {
+            acc[p.id] = { full_name: p.full_name, email: p.email };
+            return acc;
+          }, {} as Record<string, { full_name: string | null; email: string | null }>);
+        }
+      }
+      
+      // Map headers with branch mapping data and uploader info
       const mappedHeaders = await Promise.all(
         (headers || []).map(async (h: any) => {
           let branchMappingResult = null;
@@ -31,6 +50,8 @@ const POList = () => {
               console.error('Error finding branch mapping:', err);
             }
           }
+          
+          const uploaderProfile = h.user_id ? profilesMap[h.user_id] : null;
           
           return {
             id: h.id,
@@ -54,6 +75,9 @@ const POList = () => {
             sourceFile: h.source_file,
             createdAt: h.created_at,
             updatedAt: h.updated_at,
+            userId: h.user_id,
+            uploaderName: uploaderProfile?.full_name || undefined,
+            uploaderEmail: uploaderProfile?.email || undefined,
           };
         })
       );
