@@ -54,9 +54,12 @@ export type Database = {
           created_at: string
           customer_mapping_id: string
           id: string
+          transport_code_id: string | null
           updated_at: string
+          vehicle_position_id: string | null
           vendor_branch_code: string | null
           vendor_branch_name: string | null
+          warehouse_id: string | null
         }
         Insert: {
           active?: boolean | null
@@ -64,9 +67,12 @@ export type Database = {
           created_at?: string
           customer_mapping_id: string
           id?: string
+          transport_code_id?: string | null
           updated_at?: string
+          vehicle_position_id?: string | null
           vendor_branch_code?: string | null
           vendor_branch_name?: string | null
+          warehouse_id?: string | null
         }
         Update: {
           active?: boolean | null
@@ -74,9 +80,12 @@ export type Database = {
           created_at?: string
           customer_mapping_id?: string
           id?: string
+          transport_code_id?: string | null
           updated_at?: string
+          vehicle_position_id?: string | null
           vendor_branch_code?: string | null
           vendor_branch_name?: string | null
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -84,6 +93,27 @@ export type Database = {
             columns: ["customer_mapping_id"]
             isOneToOne: false
             referencedRelation: "customer_mappings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_branch_mappings_transport_code_id_fkey"
+            columns: ["transport_code_id"]
+            isOneToOne: false
+            referencedRelation: "transport_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_branch_mappings_vehicle_position_id_fkey"
+            columns: ["vehicle_position_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_branch_mappings_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -95,13 +125,10 @@ export type Database = {
           customer_name: string
           id: string
           salesperson_id: string | null
-          transport_code_id: string | null
           updated_at: string
           vat_type: number | null
-          vehicle_position_id: string | null
           vendor_customer_code: string
           vendor_customer_name: string
-          warehouse_id: string | null
         }
         Insert: {
           active?: boolean | null
@@ -109,13 +136,10 @@ export type Database = {
           customer_name: string
           id?: string
           salesperson_id?: string | null
-          transport_code_id?: string | null
           updated_at?: string
           vat_type?: number | null
-          vehicle_position_id?: string | null
           vendor_customer_code: string
           vendor_customer_name: string
-          warehouse_id?: string | null
         }
         Update: {
           active?: boolean | null
@@ -123,13 +147,10 @@ export type Database = {
           customer_name?: string
           id?: string
           salesperson_id?: string | null
-          transport_code_id?: string | null
           updated_at?: string
           vat_type?: number | null
-          vehicle_position_id?: string | null
           vendor_customer_code?: string
           vendor_customer_name?: string
-          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -137,27 +158,6 @@ export type Database = {
             columns: ["salesperson_id"]
             isOneToOne: false
             referencedRelation: "salespersons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_mappings_transport_code_id_fkey"
-            columns: ["transport_code_id"]
-            isOneToOne: false
-            referencedRelation: "transport_codes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_mappings_vehicle_position_id_fkey"
-            columns: ["vehicle_position_id"]
-            isOneToOne: false
-            referencedRelation: "vehicle_positions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_mappings_warehouse_id_fkey"
-            columns: ["warehouse_id"]
-            isOneToOne: false
-            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]

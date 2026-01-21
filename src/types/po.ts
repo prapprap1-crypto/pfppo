@@ -59,16 +59,7 @@ export interface CustomerMapping {
   customerName: string;
   vendorCustomerCode: string;
   vendorCustomerName: string;
-  warehouseId?: string;
-  warehouseCode?: string;
-  warehouseName?: string;
-  vehiclePositionId?: string;
-  vehiclePositionCode?: string;
-  vehiclePositionName?: string;
-  vatType?: number; // 0 = No VAT, 1 = VAT
-  transportCodeId?: string;
-  transportCode?: string;
-  transportName?: string;
+  vatType?: number; // 0 = No VAT, 1 = VAT, 2 = Exclude VAT
   salespersonId?: string;
   salespersonCode?: string;
   salespersonName?: string;
@@ -83,6 +74,15 @@ export interface CustomerBranchMapping {
   branch: string;
   vendorBranchCode: string;
   vendorBranchName: string;
+  warehouseId?: string;
+  warehouseCode?: string;
+  warehouseName?: string;
+  vehiclePositionId?: string;
+  vehiclePositionCode?: string;
+  vehiclePositionName?: string;
+  transportCodeId?: string;
+  transportCode?: string;
+  transportName?: string;
   active: boolean;
   createdAt: string;
 }

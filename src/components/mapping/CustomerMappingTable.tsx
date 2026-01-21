@@ -85,10 +85,7 @@ export function CustomerMappingTable({
     customerName: '',
     vendorCustomerCode: '',
     vendorCustomerName: '',
-    warehouseId: '',
-    vehiclePositionId: '',
     vatType: 1,
-    transportCodeId: '',
     salespersonId: '',
     active: true,
   });
@@ -101,6 +98,9 @@ export function CustomerMappingTable({
     branch: '',
     vendorBranchCode: '',
     vendorBranchName: '',
+    warehouseId: '',
+    vehiclePositionId: '',
+    transportCodeId: '',
     active: true,
   });
 
@@ -131,10 +131,7 @@ export function CustomerMappingTable({
       customerName: '',
       vendorCustomerCode: '',
       vendorCustomerName: '',
-      warehouseId: '',
-      vehiclePositionId: '',
       vatType: 1,
-      transportCodeId: '',
       salespersonId: '',
       active: true,
     });
@@ -144,18 +141,12 @@ export function CustomerMappingTable({
     if (editingId) {
       onEdit?.(editingId, {
         ...formData,
-        warehouseId: formData.warehouseId || undefined,
-        vehiclePositionId: formData.vehiclePositionId || undefined,
-        transportCodeId: formData.transportCodeId || undefined,
         salespersonId: formData.salespersonId || undefined,
       });
       setEditingId(null);
     } else {
       onAdd?.({
         ...formData,
-        warehouseId: formData.warehouseId || undefined,
-        vehiclePositionId: formData.vehiclePositionId || undefined,
-        transportCodeId: formData.transportCodeId || undefined,
         salespersonId: formData.salespersonId || undefined,
       });
     }
@@ -168,10 +159,7 @@ export function CustomerMappingTable({
       customerName: mapping.customerName,
       vendorCustomerCode: mapping.vendorCustomerCode,
       vendorCustomerName: mapping.vendorCustomerName,
-      warehouseId: mapping.warehouseId || '',
-      vehiclePositionId: mapping.vehiclePositionId || '',
       vatType: mapping.vatType ?? 1,
-      transportCodeId: mapping.transportCodeId || '',
       salespersonId: mapping.salespersonId || '',
       active: mapping.active,
     });
@@ -189,7 +177,15 @@ export function CustomerMappingTable({
   // Branch handlers
   const openAddBranch = (customerMappingId: string) => {
     setCurrentCustomerMappingId(customerMappingId);
-    setBranchFormData({ branch: '', vendorBranchCode: '', vendorBranchName: '', active: true });
+    setBranchFormData({ 
+      branch: '', 
+      vendorBranchCode: '', 
+      vendorBranchName: '', 
+      warehouseId: '',
+      vehiclePositionId: '',
+      transportCodeId: '',
+      active: true 
+    });
     setEditingBranchId(null);
     setIsBranchDialogOpen(true);
   };
@@ -200,6 +196,9 @@ export function CustomerMappingTable({
       branch: branch.branch,
       vendorBranchCode: branch.vendorBranchCode || '',
       vendorBranchName: branch.vendorBranchName || '',
+      warehouseId: branch.warehouseId || '',
+      vehiclePositionId: branch.vehiclePositionId || '',
+      transportCodeId: branch.transportCodeId || '',
       active: branch.active,
     });
     setEditingBranchId(branch.id);
@@ -208,11 +207,29 @@ export function CustomerMappingTable({
 
   const handleBranchSubmit = () => {
     if (editingBranchId) {
-      onEditBranch?.(editingBranchId, branchFormData);
+      onEditBranch?.(editingBranchId, {
+        ...branchFormData,
+        warehouseId: branchFormData.warehouseId || undefined,
+        vehiclePositionId: branchFormData.vehiclePositionId || undefined,
+        transportCodeId: branchFormData.transportCodeId || undefined,
+      });
     } else if (currentCustomerMappingId) {
-      onAddBranch?.(currentCustomerMappingId, branchFormData);
+      onAddBranch?.(currentCustomerMappingId, {
+        ...branchFormData,
+        warehouseId: branchFormData.warehouseId || undefined,
+        vehiclePositionId: branchFormData.vehiclePositionId || undefined,
+        transportCodeId: branchFormData.transportCodeId || undefined,
+      });
     }
-    setBranchFormData({ branch: '', vendorBranchCode: '', vendorBranchName: '', active: true });
+    setBranchFormData({ 
+      branch: '', 
+      vendorBranchCode: '', 
+      vendorBranchName: '', 
+      warehouseId: '',
+      vehiclePositionId: '',
+      transportCodeId: '',
+      active: true 
+    });
     setIsBranchDialogOpen(false);
     setEditingBranchId(null);
     setCurrentCustomerMappingId(null);
@@ -284,56 +301,6 @@ export function CustomerMappingTable({
                   </div>
                 </div>
                 
-                {/* New fields */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <Label>คลังสินค้า</Label>
-                      <Link to="/settings/warehouses" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
-                        <ExternalLink className="w-3 h-3" />
-                        ตั้งค่า
-                      </Link>
-                    </div>
-                    <Select 
-                      value={formData.warehouseId || "__none__"} 
-                      onValueChange={(value) => setFormData({ ...formData, warehouseId: value === "__none__" ? '' : value })}
-                    >
-                      <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="เลือกคลังสินค้า" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background z-50">
-                        <SelectItem value="__none__">ไม่ระบุ</SelectItem>
-                        {warehouses.map(w => (
-                          <SelectItem key={w.id} value={w.id}>{w.code} - {w.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <Label>ตำแหน่งจัดรถ</Label>
-                      <Link to="/settings/vehicle-positions" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
-                        <ExternalLink className="w-3 h-3" />
-                        ตั้งค่า
-                      </Link>
-                    </div>
-                    <Select 
-                      value={formData.vehiclePositionId || "__none__"} 
-                      onValueChange={(value) => setFormData({ ...formData, vehiclePositionId: value === "__none__" ? '' : value })}
-                    >
-                      <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="เลือกตำแหน่งจัดรถ" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background z-50">
-                        <SelectItem value="__none__">ไม่ระบุ</SelectItem>
-                        {vehiclePositions.map(v => (
-                          <SelectItem key={v.id} value={v.id}>{v.code} - {v.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>VAT</Label>
@@ -353,30 +320,28 @@ export function CustomerMappingTable({
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <Label>รหัสขนส่ง</Label>
-                      <Link to="/settings/transport-codes" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                      <Label>พนักงานขาย</Label>
+                      <Link to="/settings/salespersons" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
                         <ExternalLink className="w-3 h-3" />
                         ตั้งค่า
                       </Link>
                     </div>
                     <Select 
-                      value={formData.transportCodeId || "__none__"} 
-                      onValueChange={(value) => setFormData({ ...formData, transportCodeId: value === "__none__" ? '' : value })}
+                      value={formData.salespersonId || "__none__"} 
+                      onValueChange={(value) => setFormData({ ...formData, salespersonId: value === "__none__" ? '' : value })}
                     >
                       <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="เลือกรหัสขนส่ง" />
+                        <SelectValue placeholder="เลือกพนักงานขาย" />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
                         <SelectItem value="__none__">ไม่ระบุ</SelectItem>
-                        {transportCodes.map(t => (
-                          <SelectItem key={t.id} value={t.id}>{t.code} - {t.name}</SelectItem>
+                        {salespersons.map(s => (
+                          <SelectItem key={s.id} value={s.id}>{s.code} - {s.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                
-                {/* Salesperson field */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <Label>พนักงานขาย</Label>
@@ -428,10 +393,7 @@ export function CustomerMappingTable({
               <TableHead className="w-10"></TableHead>
               <TableHead>ชื่อลูกค้า (จาก PO)</TableHead>
               <TableHead>รหัสลูกค้า</TableHead>
-              <TableHead>คลัง</TableHead>
-              <TableHead>ตำแหน่ง</TableHead>
               <TableHead className="text-center">VAT</TableHead>
-              <TableHead>ขนส่ง</TableHead>
               <TableHead>พนักงานขาย</TableHead>
               <TableHead className="text-center">สาขา</TableHead>
               <TableHead className="text-center">สถานะ</TableHead>
@@ -470,25 +432,10 @@ export function CustomerMappingTable({
                         </div>
                       </TableCell>
                       <TableCell className="font-mono text-sm">{mapping.vendorCustomerCode || '-'}</TableCell>
-                      <TableCell className="text-sm">
-                        {mapping.warehouseCode ? (
-                          <span title={mapping.warehouseName}>{mapping.warehouseCode}</span>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {mapping.vehiclePositionCode ? (
-                          <span title={mapping.vehiclePositionName}>{mapping.vehiclePositionCode}</span>
-                        ) : '-'}
-                      </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={mapping.vatType === 1 ? "default" : "secondary"} className="text-xs">
-                          {mapping.vatType === 1 ? 'VAT' : 'No VAT'}
+                        <Badge variant={mapping.vatType === 1 ? "default" : mapping.vatType === 2 ? "outline" : "secondary"} className="text-xs">
+                          {mapping.vatType === 1 ? 'VAT' : mapping.vatType === 2 ? 'Exclude' : 'No VAT'}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {mapping.transportCode ? (
-                          <span title={mapping.transportName}>{mapping.transportCode}</span>
-                        ) : '-'}
                       </TableCell>
                       <TableCell className="text-sm">
                         {mapping.salespersonCode ? (
@@ -544,9 +491,24 @@ export function CustomerMappingTable({
                                 <span className="text-sm">{branch.branch}</span>
                                 <span className="text-xs text-muted-foreground">→</span>
                                 <span className="font-mono text-xs">{branch.vendorBranchCode || '-'}</span>
+                                {branch.warehouseCode && (
+                                  <span className="text-xs bg-muted px-1.5 py-0.5 rounded" title={`คลัง: ${branch.warehouseName}`}>
+                                    {branch.warehouseCode}
+                                  </span>
+                                )}
+                                {branch.vehiclePositionCode && (
+                                  <span className="text-xs bg-muted px-1.5 py-0.5 rounded" title={`ตำแหน่ง: ${branch.vehiclePositionName}`}>
+                                    {branch.vehiclePositionCode}
+                                  </span>
+                                )}
+                                {branch.transportCode && (
+                                  <span className="text-xs bg-muted px-1.5 py-0.5 rounded" title={`ขนส่ง: ${branch.transportName}`}>
+                                    {branch.transportCode}
+                                  </span>
+                                )}
                               </div>
                             </TableCell>
-                            <TableCell colSpan={4}></TableCell>
+                            <TableCell colSpan={2}></TableCell>
                             <TableCell className="text-center">
                               <Badge variant={branch.active ? "outline" : "secondary"} className="text-xs">
                                 {branch.active ? 'เปิด' : 'ปิด'}
@@ -582,7 +544,7 @@ export function CustomerMappingTable({
             })}
             {filteredMappings.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   ไม่พบข้อมูล Mapping ลูกค้า
                 </TableCell>
               </TableRow>
@@ -634,9 +596,8 @@ export function CustomerMappingTable({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Branch Add/Edit Dialog */}
       <Dialog open={isBranchDialogOpen} onOpenChange={setIsBranchDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingBranchId ? 'แก้ไขสาขา' : 'เพิ่มสาขาใหม่'}
@@ -669,6 +630,77 @@ export function CustomerMappingTable({
                 />
               </div>
             </div>
+            
+            {/* Warehouse, Vehicle Position, Transport Code */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label>คลังสินค้า</Label>
+                  <Link to="/settings/warehouses" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                    <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+                <Select 
+                  value={branchFormData.warehouseId || "__none__"} 
+                  onValueChange={(value) => setBranchFormData({ ...branchFormData, warehouseId: value === "__none__" ? '' : value })}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="เลือกคลัง" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="__none__">ไม่ระบุ</SelectItem>
+                    {warehouses.map(w => (
+                      <SelectItem key={w.id} value={w.id}>{w.code} - {w.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label>ตำแหน่งจัดรถ</Label>
+                  <Link to="/settings/vehicle-positions" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                    <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+                <Select 
+                  value={branchFormData.vehiclePositionId || "__none__"} 
+                  onValueChange={(value) => setBranchFormData({ ...branchFormData, vehiclePositionId: value === "__none__" ? '' : value })}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="เลือกตำแหน่ง" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="__none__">ไม่ระบุ</SelectItem>
+                    {vehiclePositions.map(v => (
+                      <SelectItem key={v.id} value={v.id}>{v.code} - {v.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label>รหัสขนส่ง</Label>
+                  <Link to="/settings/transport-codes" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                    <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+                <Select 
+                  value={branchFormData.transportCodeId || "__none__"} 
+                  onValueChange={(value) => setBranchFormData({ ...branchFormData, transportCodeId: value === "__none__" ? '' : value })}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="เลือกขนส่ง" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="__none__">ไม่ระบุ</SelectItem>
+                    {transportCodes.map(t => (
+                      <SelectItem key={t.id} value={t.id}>{t.code} - {t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
             <div className="flex items-center gap-3">
               <Switch 
                 checked={branchFormData.active}
