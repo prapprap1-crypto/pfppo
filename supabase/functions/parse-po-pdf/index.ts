@@ -67,6 +67,14 @@ Return a JSON object with this EXACT structure:
   ]
 }
 
+CRITICAL RULES for extracting po_number:
+- The PO number is usually found at the top of the document
+- Look for labels like "เลขที่ใบสั่งซื้อ", "PO Number", "เลขที่ PO", "PO No.", "Purchase Order No.", "หมายเลขใบสั่งซื้อ", "เลขที่เอกสาร", "Doc No."
+- The PO number often starts with prefixes like: PO, POB, IM, IMB, SO, SOB, etc.
+- PO numbers typically contain numbers and may contain dates in format like "IM20251202014450" or "POB825124790"
+- If the filename contains a PO-like pattern (e.g., IM20251202014450.pdf), use that as po_number if not found in document
+- NEVER return null for po_number - if you cannot find it, extract any document reference number visible
+
 CRITICAL RULES for extracting customer_name:
 - Look at the TOP of the document for the ordering company name
 - It typically starts with "บริษัท" and ends with "จำกัด"
@@ -84,7 +92,7 @@ Other rules:
 - Extract dates in YYYY-MM-DD format
 - Extract numbers without currency symbols or commas
 - Extract ALL item rows from the table
-- If a field is not found, use null
+- If a field is not found, use null (EXCEPT po_number which must never be null)
 - Always return valid JSON
 - For "branch": Look at "สถานที่จัดส่ง" (Delivery Location) field. Remove the word "สาขา" from the beginning if present. For example: "สาขา สาขา ตะวันนา 2 บางกะปิ" should become "ตะวันนา 2 บางกะปิ"`;
 
@@ -103,7 +111,7 @@ Other rules:
             content: [
               {
                 type: 'text',
-                text: 'Extract all data from this Thai Purchase Order (PO) document. Return ONLY the JSON object, no markdown or explanation.'
+                text: `Extract all data from this Thai Purchase Order (PO) document. The filename is "${fileName}". If the PO number cannot be found in the document, you may extract it from the filename. Return ONLY the JSON object, no markdown or explanation.`
               },
               {
                 type: 'image_url',
@@ -167,6 +175,23 @@ Other rules:
     }
 
     console.log('Extracted data:', extractedData);
+
+    // Fallback: If po_number is null, try to extract from filename
+    if (!extractedData.po_number) {
+      // Try to extract PO number from filename (e.g., IM20251202014450.pdf -> IM20251202014450)
+      const fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+      // Common PO patterns: IM/IMB/PO/POB/SO/SOB followed by numbers
+      const poPattern = /^(IM|IMB|PO|POB|SO|SOB|DO|DOB)?(\d{6,})/i;
+      const match = fileNameWithoutExt.match(poPattern);
+      if (match) {
+        extractedData.po_number = match[0];
+        console.log('Fallback: Using filename as po_number:', extractedData.po_number);
+      } else {
+        // Last resort: use the entire filename without extension
+        extractedData.po_number = fileNameWithoutExt;
+        console.log('Fallback: Using full filename as po_number:', extractedData.po_number);
+      }
+    }
 
     return new Response(
       JSON.stringify({ 
