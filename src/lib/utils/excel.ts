@@ -59,10 +59,11 @@ const COLUMN_MAPPINGS: Record<string, { header: string; width: number; getValue:
     getValue: (item, _, isFirstInGroup) => {
       if (!isFirstInGroup) return '';
       // Format: WarehouseCode-VehiclePositionCode-VAT-TransportCode
+      // VAT: 0 = No VAT, 1 = VAT, 2 = Exclude VAT
       const parts = [
         item.warehouse_code || '',
         item.vehicle_position_code || '',
-        item.vat_type === 1 ? '1' : '0',
+        String(item.vat_type ?? 0),
         item.transport_code || ''
       ];
       return parts.join('-');
