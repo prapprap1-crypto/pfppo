@@ -157,7 +157,7 @@ const POList = () => {
         {showUpload && (
           <div className="bg-card rounded-xl border p-6 animate-slide-up">
             <h3 className="font-semibold mb-4">อัปโหลดไฟล์ PO (PDF)</h3>
-            <FileUploadZone maxFiles={10} />
+            <FileUploadZone maxFiles={20} onUploadComplete={loadData} />
           </div>
         )}
 
