@@ -357,7 +357,7 @@ export function FileUploadZone({
               {isDragActive ? 'วางไฟล์ที่นี่' : 'ลากไฟล์มาวางที่นี่'}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              หรือคลิกเพื่อเลือกไฟล์ PDF (สูงสุด {maxFiles} ไฟล์)
+              หรือคลิกเพื่อเลือกไฟล์ PDF (สูงสุด 20 ไฟล์)
             </p>
           </div>
         </div>

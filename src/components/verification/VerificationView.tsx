@@ -114,8 +114,31 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
 
   const unmappedCount = localItems.filter(item => !item.isMapped).length;
 
+  // Calculate net total from items
+  const calculatedNetTotal = useMemo(() => {
+    return localItems.reduce((sum, item) => sum + item.amount, 0);
+  }, [localItems]);
+
   const formatCurrency = (value: number) => {
     return value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  // Handle summary field edits (net_total, vat, grand_total)
+  const handleSummaryEdit = async (field: 'netTotal' | 'vat' | 'grandTotal', value: number) => {
+    const updates: Partial<POHeader> = { [field]: value };
+    setLocalPO(prev => ({ ...prev, ...updates }));
+    
+    // Debounced save to database
+    try {
+      const dbUpdates: Record<string, number> = {};
+      if (field === 'netTotal') dbUpdates.net_total = value;
+      if (field === 'vat') dbUpdates.vat = value;
+      if (field === 'grandTotal') dbUpdates.grand_total = value;
+      
+      await updatePOHeader(po.id, dbUpdates);
+    } catch (error) {
+      console.error('Error updating summary:', error);
+    }
   };
 
   const handleItemEdit = (itemId: string, field: keyof POItem, value: string | number) => {
@@ -638,7 +661,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
           </div>
           <div>
             <span className="text-muted-foreground">รวมมูลค่า:</span>
-            <p className="font-medium">฿{formatCurrency(localPO.netTotal)}</p>
+            <p className="font-medium">฿{formatCurrency(calculatedNetTotal)}</p>
           </div>
           <div>
             <span className="text-muted-foreground">ส่วนลด:</span>
@@ -646,15 +669,42 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
           </div>
           <div>
             <span className="text-muted-foreground">มูลค่าหลังหักส่วนลด:</span>
-            <p className="font-medium">฿{formatCurrency(localPO.netTotal)}</p>
+            {isModerator ? (
+              <Input
+                type="number"
+                value={localPO.netTotal}
+                onChange={(e) => handleSummaryEdit('netTotal', Number(e.target.value))}
+                className="h-7 w-28 text-sm font-medium"
+              />
+            ) : (
+              <p className="font-medium">฿{formatCurrency(localPO.netTotal)}</p>
+            )}
           </div>
           <div>
             <span className="text-muted-foreground">ภาษีมูลค่าเพิ่ม 7%:</span>
-            <p className="font-medium">฿{formatCurrency(localPO.vat)}</p>
+            {isModerator ? (
+              <Input
+                type="number"
+                value={localPO.vat}
+                onChange={(e) => handleSummaryEdit('vat', Number(e.target.value))}
+                className="h-7 w-28 text-sm font-medium"
+              />
+            ) : (
+              <p className="font-medium">฿{formatCurrency(localPO.vat)}</p>
+            )}
           </div>
           <div>
             <span className="text-muted-foreground">มูลค่าสุทธิ:</span>
-            <p className="font-bold text-lg text-primary">฿{formatCurrency(localPO.grandTotal)}</p>
+            {isModerator ? (
+              <Input
+                type="number"
+                value={localPO.grandTotal}
+                onChange={(e) => handleSummaryEdit('grandTotal', Number(e.target.value))}
+                className="h-7 w-28 text-sm font-bold text-primary"
+              />
+            ) : (
+              <p className="font-bold text-lg text-primary">฿{formatCurrency(localPO.grandTotal)}</p>
+            )}
           </div>
         </div>
       </div>

@@ -25,34 +25,32 @@ export interface FetchPOHeadersResult {
   totalPages: number;
 }
 
+// Status priority for sorting: lower number = higher priority
+const STATUS_PRIORITY: Record<string, number> = {
+  'NEED_REVIEW': 0,
+  'IMPORTED': 1,
+  'NEW': 2,
+  'VERIFIED': 3,
+  'EXPORTED': 4,
+  'ERROR': 5,
+};
+
 export async function fetchPOHeadersPaginated({
   page = 1,
   pageSize = 20
 }: FetchPOHeadersParams = {}): Promise<FetchPOHeadersResult> {
-  const offset = (page - 1) * pageSize;
-  
-  // Fetch total count
-  const { count: totalCount, error: countError } = await supabase
+  // Fetch ALL data first to sort properly, then paginate
+  // This ensures NEED_REVIEW items appear on page 1 even when filtered
+  const { data: allData, error } = await supabase
     .from('po_headers')
-    .select('*', { count: 'exact', head: true });
-  
-  if (countError) throw countError;
-  
-  // Fetch paginated data with custom ordering (NEED_REVIEW first, then by PO number)
-  const { data, error } = await supabase
-    .from('po_headers')
-    .select('*')
-    .order('status', { ascending: true }) // NEED_REVIEW comes before VERIFIED alphabetically
-    .order('po_number', { ascending: true })
-    .range(offset, offset + pageSize - 1);
+    .select('*');
   
   if (error) throw error;
   
-  // Sort in memory to ensure NEED_REVIEW comes first
-  const sortedData = (data || []).sort((a, b) => {
-    // Priority: NEED_REVIEW = 0, others = 1
-    const priorityA = a.status === 'NEED_REVIEW' ? 0 : 1;
-    const priorityB = b.status === 'NEED_REVIEW' ? 0 : 1;
+  // Sort all data by status priority first, then by PO number
+  const sortedData = (allData || []).sort((a, b) => {
+    const priorityA = STATUS_PRIORITY[a.status] ?? 99;
+    const priorityB = STATUS_PRIORITY[b.status] ?? 99;
     
     if (priorityA !== priorityB) return priorityA - priorityB;
     
@@ -60,12 +58,17 @@ export async function fetchPOHeadersPaginated({
     return a.po_number.localeCompare(b.po_number, 'th');
   });
   
+  // Calculate pagination
+  const totalCount = sortedData.length;
+  const offset = (page - 1) * pageSize;
+  const paginatedData = sortedData.slice(offset, offset + pageSize);
+  
   return {
-    data: sortedData,
-    total: totalCount || 0,
+    data: paginatedData,
+    total: totalCount,
     page,
     pageSize,
-    totalPages: Math.ceil((totalCount || 0) / pageSize)
+    totalPages: Math.ceil(totalCount / pageSize)
   };
 }
 
