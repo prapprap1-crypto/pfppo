@@ -11,6 +11,130 @@ export async function fetchPOHeaders() {
   return data;
 }
 
+// Fetch PO headers with pagination, optimized for performance
+export interface FetchPOHeadersParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface FetchPOHeadersResult {
+  data: any[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export async function fetchPOHeadersPaginated({
+  page = 1,
+  pageSize = 20
+}: FetchPOHeadersParams = {}): Promise<FetchPOHeadersResult> {
+  const offset = (page - 1) * pageSize;
+  
+  // Fetch total count
+  const { count: totalCount, error: countError } = await supabase
+    .from('po_headers')
+    .select('*', { count: 'exact', head: true });
+  
+  if (countError) throw countError;
+  
+  // Fetch paginated data with custom ordering (NEED_REVIEW first, then by PO number)
+  const { data, error } = await supabase
+    .from('po_headers')
+    .select('*')
+    .order('status', { ascending: true }) // NEED_REVIEW comes before VERIFIED alphabetically
+    .order('po_number', { ascending: true })
+    .range(offset, offset + pageSize - 1);
+  
+  if (error) throw error;
+  
+  // Sort in memory to ensure NEED_REVIEW comes first
+  const sortedData = (data || []).sort((a, b) => {
+    // Priority: NEED_REVIEW = 0, others = 1
+    const priorityA = a.status === 'NEED_REVIEW' ? 0 : 1;
+    const priorityB = b.status === 'NEED_REVIEW' ? 0 : 1;
+    
+    if (priorityA !== priorityB) return priorityA - priorityB;
+    
+    // Then by PO number
+    return a.po_number.localeCompare(b.po_number, 'th');
+  });
+  
+  return {
+    data: sortedData,
+    total: totalCount || 0,
+    page,
+    pageSize,
+    totalPages: Math.ceil((totalCount || 0) / pageSize)
+  };
+}
+
+// Batch fetch branch mappings for multiple POs at once (avoids N+1 queries)
+export async function batchFetchBranchMappings(
+  poHeaders: Array<{ customer_name?: string | null; branch: string }>
+): Promise<Map<string, { vendor_branch_code?: string; vendor_branch_name?: string }>> {
+  const result = new Map<string, { vendor_branch_code?: string; vendor_branch_name?: string }>();
+  
+  if (poHeaders.length === 0) return result;
+  
+  // Get unique customer names
+  const customerNames = [...new Set(poHeaders.map(h => h.customer_name).filter(Boolean))] as string[];
+  
+  if (customerNames.length === 0) return result;
+  
+  // Fetch all customer mappings at once
+  const { data: customerMappings, error: cmError } = await supabase
+    .from('customer_mappings')
+    .select('id, customer_name')
+    .in('customer_name', customerNames)
+    .eq('active', true);
+  
+  if (cmError) throw cmError;
+  if (!customerMappings || customerMappings.length === 0) return result;
+  
+  // Create lookup by customer name
+  const customerMappingIds = customerMappings.map(cm => cm.id);
+  const customerNameToId = new Map(customerMappings.map(cm => [cm.customer_name, cm.id]));
+  
+  // Fetch all branch mappings at once
+  const { data: branchMappings, error: bmError } = await supabase
+    .from('customer_branch_mappings')
+    .select('customer_mapping_id, branch, vendor_branch_code, vendor_branch_name')
+    .in('customer_mapping_id', customerMappingIds)
+    .eq('active', true);
+  
+  if (bmError) throw bmError;
+  
+  // Create lookup: customerMappingId-branch -> branch mapping
+  const branchLookup = new Map<string, { vendor_branch_code?: string; vendor_branch_name?: string }>();
+  for (const bm of branchMappings || []) {
+    const key = `${bm.customer_mapping_id}-${bm.branch}`;
+    branchLookup.set(key, {
+      vendor_branch_code: bm.vendor_branch_code || undefined,
+      vendor_branch_name: bm.vendor_branch_name || undefined
+    });
+  }
+  
+  // Map each PO to its branch mapping
+  for (const po of poHeaders) {
+    if (!po.customer_name) continue;
+    
+    const customerMappingId = customerNameToId.get(po.customer_name);
+    if (!customerMappingId) continue;
+    
+    const key = `${customerMappingId}-${po.branch}`;
+    const branchMapping = branchLookup.get(key);
+    
+    // Use customer_name + branch as result key
+    const resultKey = `${po.customer_name}|||${po.branch}`;
+    if (branchMapping) {
+      result.set(resultKey, branchMapping);
+    }
+  }
+  
+  return result;
+}
+
 export async function fetchPOHeaderById(id: string) {
   const { data, error } = await supabase
     .from('po_headers')
