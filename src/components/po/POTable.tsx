@@ -184,7 +184,7 @@ export function POTable({ poList, onRefresh }: POTableProps) {
   };
 
   return (
-    <div className="bg-card rounded-xl border">
+    <div>
       {/* Filters */}
       <div className="p-4 border-b flex flex-wrap items-center gap-4">
         <div className="relative flex-1 min-w-64">
@@ -426,11 +426,6 @@ export function POTable({ poList, onRefresh }: POTableProps) {
             ))}
           </TableBody>
         </Table>
-      </div>
-
-      {/* Pagination Info */}
-      <div className="p-4 border-t text-sm text-muted-foreground">
-        แสดง {filteredAndSortedList.length} จาก {poList.length} รายการ
       </div>
 
       {/* Edit Dialog */}

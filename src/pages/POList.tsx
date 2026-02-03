@@ -1,29 +1,44 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { POTable } from '@/components/po/POTable';
 import { MappingAlertBanner } from '@/components/po/MappingAlertBanner';
 import { FileUploadZone } from '@/components/upload/FileUploadZone';
-import { fetchPOHeaders, findBranchMapping } from '@/lib/api/database';
+import { fetchPOHeadersPaginated, batchFetchBranchMappings } from '@/lib/api/database';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Upload, RefreshCw } from 'lucide-react';
 import { POHeader } from '@/types/po';
+import { POPagination } from '@/components/po/POPagination';
 
 const POList = () => {
   const [showUpload, setShowUpload] = useState(false);
   const [poHeaders, setPOHeaders] = useState<POHeader[]>([]);
   const [loading, setLoading] = useState(true);
   const [unmappedProductsCount, setUnmappedProductsCount] = useState(0);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const headers = await fetchPOHeaders();
+      // Fetch paginated PO headers with optimized query
+      const result = await fetchPOHeadersPaginated({
+        page: currentPage,
+        pageSize
+      });
       
-      // Get unique user IDs to fetch profiles
-      const userIds = [...new Set((headers || []).map((h: any) => h.user_id).filter(Boolean))];
+      const headers = result.data;
+      setTotalItems(result.total);
+      setTotalPages(result.totalPages);
       
-      // Fetch profiles for all users
+      // Get unique user IDs to fetch profiles (batch)
+      const userIds = [...new Set(headers.map((h: any) => h.user_id).filter(Boolean))];
+      
+      // Batch fetch profiles
       let profilesMap: Record<string, { full_name: string | null; email: string | null }> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
@@ -39,77 +54,84 @@ const POList = () => {
         }
       }
       
-      // Map headers with branch mapping data and uploader info
-      const mappedHeaders = await Promise.all(
-        (headers || []).map(async (h: any) => {
-          let branchMappingResult = null;
-          if (h.customer_name && h.branch) {
-            try {
-              branchMappingResult = await findBranchMapping(h.customer_name, h.branch);
-            } catch (err) {
-              console.error('Error finding branch mapping:', err);
-            }
-          }
-          
-          const uploaderProfile = h.user_id ? profilesMap[h.user_id] : null;
-          
-          return {
-            id: h.id,
-            poNumber: h.po_number,
-            customerName: h.customer_name,
-            vendorCustomerCode: h.vendor_customer_code,
-            vendorCustomerName: h.vendor_customer_name,
-            isCustomerMapped: h.is_customer_mapped,
-            vendorBranchCode: branchMappingResult?.branchMapping?.vendor_branch_code || undefined,
-            vendorBranchName: branchMappingResult?.branchMapping?.vendor_branch_name || undefined,
-            isBranchMapped: !!(branchMappingResult?.branchMapping?.vendor_branch_code),
-            supplierCode: h.supplier_code,
-            supplierName: h.supplier_name,
-            branch: h.branch,
-            documentDate: h.document_date,
-            dueDate: h.due_date,
-            netTotal: Number(h.net_total),
-            vat: Number(h.vat),
-            grandTotal: Number(h.grand_total),
-            status: h.status,
-            sourceFile: h.source_file,
-            createdAt: h.created_at,
-            updatedAt: h.updated_at,
-            userId: h.user_id,
-            uploaderName: uploaderProfile?.full_name || undefined,
-            uploaderEmail: uploaderProfile?.email || undefined,
-          };
-        })
+      // Batch fetch branch mappings (avoids N+1 queries)
+      const branchMappingsMap = await batchFetchBranchMappings(
+        headers.map((h: any) => ({ customer_name: h.customer_name, branch: h.branch }))
       );
+      
+      // Map headers with branch mapping data and uploader info (no N+1 queries now)
+      const mappedHeaders = headers.map((h: any) => {
+        const branchKey = `${h.customer_name}|||${h.branch}`;
+        const branchMapping = branchMappingsMap.get(branchKey);
+        const uploaderProfile = h.user_id ? profilesMap[h.user_id] : null;
+        
+        return {
+          id: h.id,
+          poNumber: h.po_number,
+          customerName: h.customer_name,
+          vendorCustomerCode: h.vendor_customer_code,
+          vendorCustomerName: h.vendor_customer_name,
+          isCustomerMapped: h.is_customer_mapped,
+          vendorBranchCode: branchMapping?.vendor_branch_code,
+          vendorBranchName: branchMapping?.vendor_branch_name,
+          isBranchMapped: !!(branchMapping?.vendor_branch_code),
+          supplierCode: h.supplier_code,
+          supplierName: h.supplier_name,
+          branch: h.branch,
+          documentDate: h.document_date,
+          dueDate: h.due_date,
+          netTotal: Number(h.net_total),
+          vat: Number(h.vat),
+          grandTotal: Number(h.grand_total),
+          status: h.status,
+          sourceFile: h.source_file,
+          createdAt: h.created_at,
+          updatedAt: h.updated_at,
+          userId: h.user_id,
+          uploaderName: uploaderProfile?.full_name || undefined,
+          uploaderEmail: uploaderProfile?.email || undefined,
+        };
+      });
       
       setPOHeaders(mappedHeaders);
 
-      // Count unmapped products
-      const { count } = await supabase
-        .from('po_items')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_mapped', false);
-      
-      setUnmappedProductsCount(count || 0);
+      // Count unmapped products (only on first page load or refresh)
+      if (currentPage === 1) {
+        const { count } = await supabase
+          .from('po_items')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_mapped', false);
+        
+        setUnmappedProductsCount(count || 0);
+      }
     } catch (error) {
       console.error('Error loading PO headers:', error);
       setPOHeaders([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
-  // Calculate mapping stats
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
+  // Calculate mapping stats from current page data
   const mappingStats = useMemo(() => ({
-    totalPOs: poHeaders.length,
+    totalPOs: totalItems, // Use total from server
     unmappedCustomer: poHeaders.filter(p => p.customerName && !p.isCustomerMapped).length,
     unmappedBranch: poHeaders.filter(p => p.branch && !p.isBranchMapped).length,
     unmappedProducts: unmappedProductsCount,
-  }), [poHeaders, unmappedProductsCount]);
+  }), [poHeaders, unmappedProductsCount, totalItems]);
 
   return (
     <MainLayout title="รายการ PO" subtitle="จัดการใบสั่งซื้อทั้งหมด">
@@ -118,7 +140,7 @@ const POList = () => {
         
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-muted-foreground">ทั้งหมด {poHeaders.length} รายการ</p>
+            <p className="text-muted-foreground">ทั้งหมด {totalItems} รายการ</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
@@ -139,7 +161,17 @@ const POList = () => {
           </div>
         )}
 
-        <POTable poList={poHeaders} onRefresh={loadData} />
+        <div className="bg-card rounded-xl border">
+          <POTable poList={poHeaders} onRefresh={loadData} />
+          <POPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        </div>
       </div>
     </MainLayout>
   );
