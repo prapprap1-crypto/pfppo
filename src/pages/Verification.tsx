@@ -127,15 +127,15 @@ const Verification = () => {
   return (
     <MainLayout title="ตรวจสอบเอกสาร" subtitle={po.poNumber}>
       <div className="space-y-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/pending-verification')}>
+        <Button variant="ghost" size="sm" onClick={() => navigate('/verification')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           กลับไปหน้าตรวจสอบเอกสาร
         </Button>
         <VerificationView 
           po={po} 
           items={items}
-          onVerify={() => navigate('/pending-verification')}
-          onReject={() => navigate('/pending-verification')}
+          onVerify={() => navigate('/verification')}
+          onReject={() => navigate('/verification')}
         />
       </div>
     </MainLayout>
