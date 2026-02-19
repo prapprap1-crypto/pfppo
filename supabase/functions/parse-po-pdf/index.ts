@@ -83,9 +83,13 @@ CRITICAL RULES for extracting customer_name:
 
 CRITICAL RULES for extracting totals:
 - Look at the summary box on the bottom right of the document
-- "รวมมูลค่า" (Gross Total) = net_total (value BEFORE VAT)
-- "ภาษีมูลค่าเพิ่ม 7%" (Vat Total) = vat
-- "มูลค่าสุทธิ" (Net Total) = grand_total (final total AFTER VAT)
+- The summary box typically has 3 key rows in this EXACT ORDER from top to bottom:
+  1. "มูลค่าหลังหักส่วนลด" OR "Total After Discount" OR "รวมมูลค่า" OR "Gross Total" → map to net_total (the subtotal BEFORE adding VAT)
+  2. "ภาษีมูลค่าเพิ่ม 7%" OR "Vat Total" OR "VAT 7%" → map to vat (the tax amount only)
+  3. "มูลค่าสุทธิ" OR "Net Total" OR "ยอดรวมสุทธิ" → map to grand_total (the FINAL total AFTER VAT, always the LARGEST number)
+- IMPORTANT: grand_total must ALWAYS be the largest number (net_total + vat = grand_total)
+- IMPORTANT: net_total is the middle value, NOT the largest. The largest value is always grand_total.
+- If you are unsure, verify: net_total + vat ≈ grand_total. If not, you have the values swapped.
 - Extract these values EXACTLY as shown in the document. DO NOT calculate or recalculate any values.
 
 Other rules:
