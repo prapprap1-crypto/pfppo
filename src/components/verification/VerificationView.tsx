@@ -125,17 +125,31 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
 
   // Handle summary field edits (net_total, vat, grand_total)
   const handleSummaryEdit = async (field: 'netTotal' | 'vat' | 'grandTotal', value: number) => {
+    const oldValue = localPO[field];
     const updates: Partial<POHeader> = { [field]: value };
     setLocalPO(prev => ({ ...prev, ...updates }));
     
     // Debounced save to database
     try {
       const dbUpdates: Record<string, number> = {};
-      if (field === 'netTotal') dbUpdates.net_total = value;
-      if (field === 'vat') dbUpdates.vat = value;
-      if (field === 'grandTotal') dbUpdates.grand_total = value;
+      let dbFieldName = '';
+      if (field === 'netTotal') { dbUpdates.net_total = value; dbFieldName = 'net_total'; }
+      if (field === 'vat') { dbUpdates.vat = value; dbFieldName = 'vat'; }
+      if (field === 'grandTotal') { dbUpdates.grand_total = value; dbFieldName = 'grand_total'; }
       
       await updatePOHeader(po.id, dbUpdates);
+
+      // Save edit history
+      if (oldValue !== value && dbFieldName) {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from('po_edit_history').insert({
+          po_id: po.id,
+          edited_by: user?.id || null,
+          field_name: dbFieldName,
+          old_value: String(oldValue),
+          new_value: String(value),
+        });
+      }
     } catch (error) {
       console.error('Error updating summary:', error);
     }

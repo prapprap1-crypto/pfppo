@@ -57,24 +57,35 @@ export function EditHistoryDialog({ poId }: EditHistoryDialogProps) {
 
   const getFieldLabel = (fieldName: string) => {
     switch (fieldName) {
-      case 'customer_name':
-        return 'ชื่อลูกค้า';
-      case 'branch':
-        return 'ชื่อสาขา';
-      default:
-        return fieldName;
+      case 'customer_name': return 'ชื่อลูกค้า';
+      case 'branch': return 'ชื่อสาขา';
+      case 'net_total': return 'มูลค่าหลังหักส่วนลด';
+      case 'vat': return 'ภาษีมูลค่าเพิ่ม 7%';
+      case 'grand_total': return 'มูลค่าสุทธิ';
+      default: return fieldName;
     }
   };
 
   const getFieldIcon = (fieldName: string) => {
     switch (fieldName) {
-      case 'customer_name':
-        return <Building2 className="w-4 h-4" />;
-      case 'branch':
-        return <MapPin className="w-4 h-4" />;
-      default:
-        return null;
+      case 'customer_name': return <Building2 className="w-4 h-4" />;
+      case 'branch': return <MapPin className="w-4 h-4" />;
+      case 'net_total':
+      case 'vat':
+      case 'grand_total':
+        return <span className="text-xs font-bold">฿</span>;
+      default: return null;
     }
+  };
+
+  const formatValue = (fieldName: string, value: string) => {
+    if (['net_total', 'vat', 'grand_total'].includes(fieldName)) {
+      const num = parseFloat(value);
+      if (!isNaN(num)) {
+        return `฿${num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+    }
+    return value;
   };
 
   return (
@@ -91,8 +102,8 @@ export function EditHistoryDialog({ poId }: EditHistoryDialogProps) {
             <History className="w-5 h-5" />
             ประวัติการแก้ไข
           </DialogTitle>
-          <DialogDescription>
-            รายการแก้ไขชื่อลูกค้าและสาขาของเอกสารนี้
+        <DialogDescription>
+            รายการแก้ไขข้อมูลของเอกสารนี้
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 max-h-[60vh] overflow-y-auto">
@@ -123,11 +134,11 @@ export function EditHistoryDialog({ poId }: EditHistoryDialogProps) {
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground line-through truncate max-w-[40%]" title={item.old_value}>
-                      {item.old_value}
+                      {formatValue(item.field_name, item.old_value)}
                     </span>
                     <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
                     <span className="font-medium text-foreground truncate max-w-[40%]" title={item.new_value}>
-                      {item.new_value}
+                      {formatValue(item.field_name, item.new_value)}
                     </span>
                   </div>
                 </div>
