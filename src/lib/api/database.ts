@@ -17,6 +17,7 @@ export interface FetchPOHeadersParams {
   pageSize?: number;
   search?: string;
   status?: string;
+  customerMapped?: string;
 }
 
 export interface FetchPOHeadersResult {
