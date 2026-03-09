@@ -221,6 +221,19 @@ const POList = () => {
               </SelectContent>
             </Select>
           </div>
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-muted-foreground" />
+            <Select value={branchMappingFilter} onValueChange={(val) => { setBranchMappingFilter(val); setCurrentPage(1); }}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="สาขา: ทั้งหมด" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">สาขา: ทั้งหมด</SelectItem>
+                <SelectItem value="mapped">สาขา: Mapped</SelectItem>
+                <SelectItem value="unmapped">สาขา: ยังไม่ Mapped</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <p className="text-muted-foreground text-sm">ทั้งหมด {totalItems} รายการ</p>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
