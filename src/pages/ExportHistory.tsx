@@ -414,7 +414,7 @@ const ExportHistory = () => {
                                     <div>
                                       <p className="text-sm text-muted-foreground">วันที่ส่งออก</p>
                                       <p className="font-medium">
-                                        {selectedExport && format(new Date(selectedExport.exported_at), 'd MMMM yyyy HH:mm น.', { locale: th })}
+                                        {selectedExport && format(new Date(selectedExport.exported_at), 'dd/MM/yyyy HH:mm')}
                                       </p>
                                     </div>
                                     <div>
