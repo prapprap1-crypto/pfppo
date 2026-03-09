@@ -16,6 +16,7 @@ export interface FetchPOHeadersParams {
   page?: number;
   pageSize?: number;
   search?: string;
+  status?: string;
 }
 
 export interface FetchPOHeadersResult {
@@ -39,7 +40,8 @@ const STATUS_PRIORITY: Record<string, number> = {
 export async function fetchPOHeadersPaginated({
   page = 1,
   pageSize = 20,
-  search = ''
+  search = '',
+  status = 'all'
 }: FetchPOHeadersParams = {}): Promise<FetchPOHeadersResult> {
   // Fetch ALL data first to sort properly, then paginate
   // This ensures NEED_REVIEW items appear on page 1 even when filtered
@@ -51,6 +53,10 @@ export async function fetchPOHeadersPaginated({
   if (search.trim()) {
     const term = `%${search.trim()}%`;
     query = query.or(`po_number.ilike.${term},customer_name.ilike.${term},branch.ilike.${term},supplier_name.ilike.${term}`);
+  }
+  
+  if (status && status !== 'all') {
+    query = query.eq('status', status);
   }
   
   const { data: allData, error } = await query;

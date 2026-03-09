@@ -7,7 +7,14 @@ import { fetchPOHeadersPaginated, batchFetchBranchMappings } from '@/lib/api/dat
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Upload, RefreshCw, Search } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Upload, RefreshCw, Search, Filter } from 'lucide-react';
 import { POHeader } from '@/types/po';
 import { POPagination } from '@/components/po/POPagination';
 
@@ -18,6 +25,7 @@ const POList = () => {
   const [unmappedProductsCount, setUnmappedProductsCount] = useState(0);
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -32,7 +40,8 @@ const POList = () => {
       const result = await fetchPOHeadersPaginated({
         page: currentPage,
         pageSize,
-        search: searchTerm
+        search: searchTerm,
+        status: statusFilter
       });
       
       const headers = result.data;
@@ -114,7 +123,7 @@ const POList = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchTerm]);
+  }, [currentPage, pageSize, searchTerm, statusFilter]);
 
   useEffect(() => {
     loadData();
@@ -163,6 +172,22 @@ const POList = () => {
               onKeyDown={handleSearchKeyDown}
               className="pl-9"
             />
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="ทุกสถานะ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกสถานะ</SelectItem>
+                <SelectItem value="NEED_REVIEW">รอตรวจสอบ</SelectItem>
+                <SelectItem value="VERIFIED">ตรวจสอบสำเร็จ</SelectItem>
+                <SelectItem value="EXPORTED">นำออกแล้ว</SelectItem>
+                <SelectItem value="NEW">พบไฟล์ใหม่</SelectItem>
+                <SelectItem value="ERROR">มีข้อผิดพลาด</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <p className="text-muted-foreground text-sm">ทั้งหมด {totalItems} รายการ</p>
           <div className="flex items-center gap-2">
