@@ -27,6 +27,7 @@ const POList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [customerMappingFilter, setCustomerMappingFilter] = useState('all');
+  const [branchMappingFilter, setBranchMappingFilter] = useState('all');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -107,8 +108,15 @@ const POList = () => {
           uploaderEmail: uploaderProfile?.email || undefined,
         };
       });
+      // Apply client-side branch mapping filter (since isBranchMapped is derived)
+      let filteredHeaders = mappedHeaders;
+      if (branchMappingFilter === 'mapped') {
+        filteredHeaders = mappedHeaders.filter(h => h.isBranchMapped);
+      } else if (branchMappingFilter === 'unmapped') {
+        filteredHeaders = mappedHeaders.filter(h => !h.isBranchMapped);
+      }
       
-      setPOHeaders(mappedHeaders);
+      setPOHeaders(filteredHeaders);
 
       // Count unmapped products (only on first page load or refresh)
       if (currentPage === 1) {
@@ -125,7 +133,7 @@ const POList = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchTerm, statusFilter, customerMappingFilter]);
+  }, [currentPage, pageSize, searchTerm, statusFilter, customerMappingFilter, branchMappingFilter]);
 
   useEffect(() => {
     loadData();
@@ -174,9 +182,9 @@ const POList = () => {
               onKeyDown={handleSearchKeyDown}
               className="pl-9 pr-9"
             />
-            {(searchInput || searchTerm || statusFilter !== 'all' || customerMappingFilter !== 'all') && (
+            {(searchInput || searchTerm || statusFilter !== 'all' || customerMappingFilter !== 'all' || branchMappingFilter !== 'all') && (
               <button
-                onClick={() => { setSearchInput(''); setSearchTerm(''); setStatusFilter('all'); setCustomerMappingFilter('all'); setCurrentPage(1); }}
+                onClick={() => { setSearchInput(''); setSearchTerm(''); setStatusFilter('all'); setCustomerMappingFilter('all'); setBranchMappingFilter('all'); setCurrentPage(1); }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 title="ล้างการค้นหา"
               >
@@ -210,6 +218,19 @@ const POList = () => {
                 <SelectItem value="all">ลูกค้า: ทั้งหมด</SelectItem>
                 <SelectItem value="mapped">ลูกค้า: Mapped</SelectItem>
                 <SelectItem value="unmapped">ลูกค้า: ยังไม่ Mapped</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-muted-foreground" />
+            <Select value={branchMappingFilter} onValueChange={(val) => { setBranchMappingFilter(val); setCurrentPage(1); }}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="สาขา: ทั้งหมด" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">สาขา: ทั้งหมด</SelectItem>
+                <SelectItem value="mapped">สาขา: Mapped</SelectItem>
+                <SelectItem value="unmapped">สาขา: ยังไม่ Mapped</SelectItem>
               </SelectContent>
             </Select>
           </div>
