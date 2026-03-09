@@ -6,7 +6,8 @@ import { FileUploadZone } from '@/components/upload/FileUploadZone';
 import { fetchPOHeadersPaginated, batchFetchBranchMappings } from '@/lib/api/database';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Upload, RefreshCw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Upload, RefreshCw, Search } from 'lucide-react';
 import { POHeader } from '@/types/po';
 import { POPagination } from '@/components/po/POPagination';
 
