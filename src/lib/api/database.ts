@@ -40,7 +40,8 @@ const STATUS_PRIORITY: Record<string, number> = {
 export async function fetchPOHeadersPaginated({
   page = 1,
   pageSize = 20,
-  search = ''
+  search = '',
+  status = 'all'
 }: FetchPOHeadersParams = {}): Promise<FetchPOHeadersResult> {
   // Fetch ALL data first to sort properly, then paginate
   // This ensures NEED_REVIEW items appear on page 1 even when filtered
