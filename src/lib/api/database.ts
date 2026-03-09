@@ -55,6 +55,10 @@ export async function fetchPOHeadersPaginated({
     query = query.or(`po_number.ilike.${term},customer_name.ilike.${term},branch.ilike.${term},supplier_name.ilike.${term}`);
   }
   
+  if (status && status !== 'all') {
+    query = query.eq('status', status);
+  }
+  
   const { data: allData, error } = await query;
   
   if (error) throw error;
