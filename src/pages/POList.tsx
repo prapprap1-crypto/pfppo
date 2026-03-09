@@ -108,8 +108,15 @@ const POList = () => {
           uploaderEmail: uploaderProfile?.email || undefined,
         };
       });
+      // Apply client-side branch mapping filter (since isBranchMapped is derived)
+      let filteredHeaders = mappedHeaders;
+      if (branchMappingFilter === 'mapped') {
+        filteredHeaders = mappedHeaders.filter(h => h.isBranchMapped);
+      } else if (branchMappingFilter === 'unmapped') {
+        filteredHeaders = mappedHeaders.filter(h => !h.isBranchMapped);
+      }
       
-      setPOHeaders(mappedHeaders);
+      setPOHeaders(filteredHeaders);
 
       // Count unmapped products (only on first page load or refresh)
       if (currentPage === 1) {
