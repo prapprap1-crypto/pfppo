@@ -133,7 +133,7 @@ const POList = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchTerm, statusFilter, customerMappingFilter]);
+  }, [currentPage, pageSize, searchTerm, statusFilter, customerMappingFilter, branchMappingFilter]);
 
   useEffect(() => {
     loadData();
