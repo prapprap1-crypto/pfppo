@@ -159,62 +159,6 @@ export function POTable({ poList, onRefresh }: POTableProps) {
 
   return (
     <div>
-      {/* Filters */}
-      <div className="p-4 border-b flex flex-wrap items-center gap-4">
-        <div className="relative flex-1 min-w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="ค้นหาเลข PO, ผู้จำหน่าย, หรือสาขา..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-muted-foreground" />
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="ทุกสถานะ" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">ทุกสถานะ</SelectItem>
-              <SelectItem value="NEW">พบไฟล์ใหม่</SelectItem>
-              <SelectItem value="IMPORTED">นำเข้าสำเร็จ</SelectItem>
-              <SelectItem value="NEED_REVIEW">รอตรวจสอบ</SelectItem>
-              <SelectItem value="VERIFIED">ตรวจสอบสำเร็จ</SelectItem>
-              <SelectItem value="EXPORTED">นำออกแล้ว</SelectItem>
-              <SelectItem value="ERROR">มีข้อผิดพลาด</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-muted-foreground" />
-          <Select value={customerMappingFilter} onValueChange={setCustomerMappingFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Mapping ลูกค้า" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">ลูกค้า: ทั้งหมด</SelectItem>
-              <SelectItem value="mapped">ลูกค้า: Mapped</SelectItem>
-              <SelectItem value="unmapped">ลูกค้า: ยังไม่ Mapped</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-muted-foreground" />
-          <Select value={branchMappingFilter} onValueChange={setBranchMappingFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Mapping สาขา" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">สาขา: ทั้งหมด</SelectItem>
-              <SelectItem value="mapped">สาขา: Mapped</SelectItem>
-              <SelectItem value="unmapped">สาขา: ยังไม่ Mapped</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
       {/* Table */}
       <div className="overflow-x-auto">
         <Table>
