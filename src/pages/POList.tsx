@@ -182,9 +182,9 @@ const POList = () => {
               onKeyDown={handleSearchKeyDown}
               className="pl-9 pr-9"
             />
-            {(searchInput || searchTerm || statusFilter !== 'all' || customerMappingFilter !== 'all') && (
+            {(searchInput || searchTerm || statusFilter !== 'all' || customerMappingFilter !== 'all' || branchMappingFilter !== 'all') && (
               <button
-                onClick={() => { setSearchInput(''); setSearchTerm(''); setStatusFilter('all'); setCustomerMappingFilter('all'); setCurrentPage(1); }}
+                onClick={() => { setSearchInput(''); setSearchTerm(''); setStatusFilter('all'); setCustomerMappingFilter('all'); setBranchMappingFilter('all'); setCurrentPage(1); }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 title="ล้างการค้นหา"
               >
