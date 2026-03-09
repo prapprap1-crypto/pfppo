@@ -125,7 +125,7 @@ const POList = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchTerm, statusFilter]);
+  }, [currentPage, pageSize, searchTerm, statusFilter, customerMappingFilter]);
 
   useEffect(() => {
     loadData();
