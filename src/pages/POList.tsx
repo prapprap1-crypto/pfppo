@@ -16,6 +16,8 @@ const POList = () => {
   const [poHeaders, setPOHeaders] = useState<POHeader[]>([]);
   const [loading, setLoading] = useState(true);
   const [unmappedProductsCount, setUnmappedProductsCount] = useState(0);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
