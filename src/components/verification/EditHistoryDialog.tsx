@@ -129,7 +129,7 @@ export function EditHistoryDialog({ poId }: EditHistoryDialogProps) {
                       {getFieldLabel(item.field_name)}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {format(new Date(item.created_at), 'dd MMM yyyy HH:mm', { locale: th })}
+                      {format(new Date(item.created_at), 'dd/MM/yyyy HH:mm')}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">

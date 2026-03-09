@@ -256,7 +256,7 @@ const ExportHistory = () => {
                 <div>
                   <p className="text-2xl font-bold">
                     {history.length > 0 
-                      ? format(new Date(history[0].exported_at), 'd MMM', { locale: th })
+                      ? format(new Date(history[0].exported_at), 'dd/MM/yyyy')
                       : '-'}
                   </p>
                   <p className="text-sm text-muted-foreground">ส่งออกล่าสุด</p>
@@ -356,7 +356,7 @@ const ExportHistory = () => {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-muted-foreground" />
-                          {format(new Date(record.exported_at), 'd MMM yyyy HH:mm', { locale: th })}
+                          {format(new Date(record.exported_at), 'dd/MM/yyyy HH:mm')}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -414,7 +414,7 @@ const ExportHistory = () => {
                                     <div>
                                       <p className="text-sm text-muted-foreground">วันที่ส่งออก</p>
                                       <p className="font-medium">
-                                        {selectedExport && format(new Date(selectedExport.exported_at), 'd MMMM yyyy HH:mm น.', { locale: th })}
+                                        {selectedExport && format(new Date(selectedExport.exported_at), 'dd/MM/yyyy HH:mm')}
                                       </p>
                                     </div>
                                     <div>
@@ -442,7 +442,7 @@ const ExportHistory = () => {
                                           <TableCell>{po.supplier_name}</TableCell>
                                           <TableCell>{po.branch}</TableCell>
                                           <TableCell>
-                                            {format(new Date(po.document_date), 'd MMM yy', { locale: th })}
+                                            {format(new Date(po.document_date), 'dd/MM/yyyy')}
                                           </TableCell>
                                           <TableCell className="text-right">
                                             {formatCurrency(po.grand_total)}

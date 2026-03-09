@@ -671,7 +671,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
           </div>
           <div>
             <span className="text-muted-foreground">วันครบกำหนด:</span>
-            <p className="font-medium">{new Date(localPO.dueDate).toLocaleDateString('th-TH')}</p>
+            <p className="font-medium">{(() => { const d = new Date(localPO.dueDate); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; })()}</p>
           </div>
           <div>
             <span className="text-muted-foreground">รวมมูลค่า:</span>

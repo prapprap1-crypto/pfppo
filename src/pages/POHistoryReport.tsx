@@ -398,7 +398,7 @@ export default function POHistoryReport() {
               filteredLogs.map((log) => (
                 <TableRow key={log.id}>
                   <TableCell className="text-sm">
-                    {format(new Date(log.created_at), 'dd MMM yyyy HH:mm:ss', { locale: th })}
+                    {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss')}
                   </TableCell>
                   <TableCell>
                     {log.po_number ? (

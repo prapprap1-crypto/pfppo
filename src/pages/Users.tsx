@@ -438,7 +438,7 @@ export default function Users() {
                     <TableCell>{getRoleBadge(u.role)}</TableCell>
                     <TableCell>{getApprovalBadge(u.is_approved)}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(u.created_at).toLocaleDateString('th-TH')}
+                      {(() => { const d = new Date(u.created_at); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; })()}
                     </TableCell>
                     {isAdmin && (
                       <TableCell className="text-right">

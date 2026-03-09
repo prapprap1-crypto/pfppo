@@ -207,7 +207,7 @@ export async function createPOHeader(poHeader: {
   // Check for duplicate PO
   const { exists, existingPO } = await checkDuplicatePO(poHeader.po_number);
   if (exists) {
-    throw new Error(`PO ${poHeader.po_number} มีอยู่แล้วในระบบ (นำเข้าเมื่อ ${new Date(existingPO.created_at).toLocaleDateString('th-TH')})`);
+    throw new Error(`PO ${poHeader.po_number} มีอยู่แล้วในระบบ (นำเข้าเมื่อ ${(() => { const d = new Date(existingPO.created_at); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; })()})`);
   }
 
   const { data, error } = await supabase

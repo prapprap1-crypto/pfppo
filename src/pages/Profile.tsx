@@ -433,7 +433,7 @@ export default function Profile() {
               <div>
                 <p className="text-muted-foreground">สร้างเมื่อ</p>
                 <p className="text-foreground">
-                  {user?.created_at ? new Date(user.created_at).toLocaleDateString('th-TH') : '-'}
+                  {user?.created_at ? (() => { const d = new Date(user.created_at); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; })() : '-'}
                 </p>
               </div>
             </div>

@@ -230,7 +230,7 @@ export function POActionHistoryDialog({ poId, poNumber }: POActionHistoryDialogP
                       {getActionLabel(item.action)}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {format(new Date(item.created_at), 'dd MMM yyyy HH:mm', { locale: th })}
+                      {format(new Date(item.created_at), 'dd/MM/yyyy HH:mm')}
                     </span>
                   </div>
                   
