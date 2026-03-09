@@ -153,10 +153,23 @@ const POList = () => {
       <div className="space-y-6">
         <MappingAlertBanner stats={mappingStats} />
         
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-muted-foreground">ทั้งหมด {totalItems} รายการ</p>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="relative flex-1 min-w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="ค้นหาเลข PO, ลูกค้า, สาขา..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              className="pl-9"
+            />
           </div>
+          <Button variant="outline" size="sm" onClick={handleSearch}>
+            <Search className="w-4 h-4 mr-2" />
+            ค้นหา
+          </Button>
+          <p className="text-muted-foreground text-sm">ทั้งหมด {totalItems} รายการ</p>
+        </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
