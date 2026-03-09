@@ -442,7 +442,7 @@ const ExportHistory = () => {
                                           <TableCell>{po.supplier_name}</TableCell>
                                           <TableCell>{po.branch}</TableCell>
                                           <TableCell>
-                                            {format(new Date(po.document_date), 'd MMM yy', { locale: th })}
+                                            {format(new Date(po.document_date), 'dd/MM/yyyy')}
                                           </TableCell>
                                           <TableCell className="text-right">
                                             {formatCurrency(po.grand_total)}
