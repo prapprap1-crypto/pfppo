@@ -174,9 +174,9 @@ const POList = () => {
               onKeyDown={handleSearchKeyDown}
               className="pl-9 pr-9"
             />
-            {(searchInput || searchTerm || statusFilter !== 'all') && (
+            {(searchInput || searchTerm || statusFilter !== 'all' || customerMappingFilter !== 'all') && (
               <button
-                onClick={() => { setSearchInput(''); setSearchTerm(''); setStatusFilter('all'); setCurrentPage(1); }}
+                onClick={() => { setSearchInput(''); setSearchTerm(''); setStatusFilter('all'); setCustomerMappingFilter('all'); setCurrentPage(1); }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 title="ล้างการค้นหา"
               >
@@ -197,6 +197,19 @@ const POList = () => {
                 <SelectItem value="EXPORTED">นำออกแล้ว</SelectItem>
                 <SelectItem value="NEW">พบไฟล์ใหม่</SelectItem>
                 <SelectItem value="ERROR">มีข้อผิดพลาด</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-muted-foreground" />
+            <Select value={customerMappingFilter} onValueChange={(val) => { setCustomerMappingFilter(val); setCurrentPage(1); }}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="ลูกค้า: ทั้งหมด" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ลูกค้า: ทั้งหมด</SelectItem>
+                <SelectItem value="mapped">ลูกค้า: Mapped</SelectItem>
+                <SelectItem value="unmapped">ลูกค้า: ยังไม่ Mapped</SelectItem>
               </SelectContent>
             </Select>
           </div>
