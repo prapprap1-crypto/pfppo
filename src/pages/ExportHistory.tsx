@@ -356,7 +356,7 @@ const ExportHistory = () => {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-muted-foreground" />
-                          {format(new Date(record.exported_at), 'd MMM yyyy HH:mm', { locale: th })}
+                          {format(new Date(record.exported_at), 'dd/MM/yyyy HH:mm')}
                         </div>
                       </TableCell>
                       <TableCell>
