@@ -42,7 +42,8 @@ const POList = () => {
         page: currentPage,
         pageSize,
         search: searchTerm,
-        status: statusFilter
+        status: statusFilter,
+        customerMapped: customerMappingFilter
       });
       
       const headers = result.data;
