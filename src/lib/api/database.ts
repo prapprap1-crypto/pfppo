@@ -16,6 +16,7 @@ export interface FetchPOHeadersParams {
   page?: number;
   pageSize?: number;
   search?: string;
+  status?: string;
 }
 
 export interface FetchPOHeadersResult {
