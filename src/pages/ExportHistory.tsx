@@ -256,7 +256,7 @@ const ExportHistory = () => {
                 <div>
                   <p className="text-2xl font-bold">
                     {history.length > 0 
-                      ? format(new Date(history[0].exported_at), 'd MMM', { locale: th })
+                      ? format(new Date(history[0].exported_at), 'dd/MM/yyyy')
                       : '-'}
                   </p>
                   <p className="text-sm text-muted-foreground">ส่งออกล่าสุด</p>
