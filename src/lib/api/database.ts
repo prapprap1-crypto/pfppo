@@ -15,6 +15,7 @@ export async function fetchPOHeaders() {
 export interface FetchPOHeadersParams {
   page?: number;
   pageSize?: number;
+  search?: string;
 }
 
 export interface FetchPOHeadersResult {
@@ -37,13 +38,22 @@ const STATUS_PRIORITY: Record<string, number> = {
 
 export async function fetchPOHeadersPaginated({
   page = 1,
-  pageSize = 20
+  pageSize = 20,
+  search = ''
 }: FetchPOHeadersParams = {}): Promise<FetchPOHeadersResult> {
   // Fetch ALL data first to sort properly, then paginate
   // This ensures NEED_REVIEW items appear on page 1 even when filtered
-  const { data: allData, error } = await supabase
+  let query = supabase
     .from('po_headers')
     .select('*');
+  
+  // Apply server-side search filter
+  if (search.trim()) {
+    const term = `%${search.trim()}%`;
+    query = query.or(`po_number.ilike.${term},customer_name.ilike.${term},branch.ilike.${term},supplier_name.ilike.${term}`);
+  }
+  
+  const { data: allData, error } = await query;
   
   if (error) throw error;
   

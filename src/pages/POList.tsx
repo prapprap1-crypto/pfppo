@@ -6,7 +6,8 @@ import { FileUploadZone } from '@/components/upload/FileUploadZone';
 import { fetchPOHeadersPaginated, batchFetchBranchMappings } from '@/lib/api/database';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Upload, RefreshCw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Upload, RefreshCw, Search } from 'lucide-react';
 import { POHeader } from '@/types/po';
 import { POPagination } from '@/components/po/POPagination';
 
@@ -15,6 +16,8 @@ const POList = () => {
   const [poHeaders, setPOHeaders] = useState<POHeader[]>([]);
   const [loading, setLoading] = useState(true);
   const [unmappedProductsCount, setUnmappedProductsCount] = useState(0);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -28,7 +31,8 @@ const POList = () => {
       // Fetch paginated PO headers with optimized query
       const result = await fetchPOHeadersPaginated({
         page: currentPage,
-        pageSize
+        pageSize,
+        search: searchTerm
       });
       
       const headers = result.data;
@@ -110,7 +114,7 @@ const POList = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, searchTerm]);
 
   useEffect(() => {
     loadData();
@@ -122,7 +126,18 @@ const POList = () => {
 
   const handlePageSizeChange = (size: number) => {
     setPageSize(size);
-    setCurrentPage(1); // Reset to first page when changing page size
+    setCurrentPage(1);
+  };
+
+  const handleSearch = () => {
+    setSearchTerm(searchInput);
+    setCurrentPage(1);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   // Calculate mapping stats from current page data
@@ -138,10 +153,18 @@ const POList = () => {
       <div className="space-y-6">
         <MappingAlertBanner stats={mappingStats} />
         
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-muted-foreground">ทั้งหมด {totalItems} รายการ</p>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="relative flex-1 min-w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="ค้นหาเลข PO, ลูกค้า, สาขา..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              className="pl-9"
+            />
           </div>
+          <p className="text-muted-foreground text-sm">ทั้งหมด {totalItems} รายการ</p>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
