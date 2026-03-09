@@ -17,6 +17,7 @@ export interface FetchPOHeadersParams {
   pageSize?: number;
   search?: string;
   status?: string;
+  customerMapped?: string;
 }
 
 export interface FetchPOHeadersResult {
@@ -41,15 +42,14 @@ export async function fetchPOHeadersPaginated({
   page = 1,
   pageSize = 20,
   search = '',
-  status = 'all'
+  status = 'all',
+  customerMapped = 'all'
 }: FetchPOHeadersParams = {}): Promise<FetchPOHeadersResult> {
   // Fetch ALL data first to sort properly, then paginate
-  // This ensures NEED_REVIEW items appear on page 1 even when filtered
   let query = supabase
     .from('po_headers')
     .select('*');
   
-  // Apply server-side search filter
   if (search.trim()) {
     const term = `%${search.trim()}%`;
     query = query.or(`po_number.ilike.${term},customer_name.ilike.${term},branch.ilike.${term},supplier_name.ilike.${term}`);
@@ -57,6 +57,12 @@ export async function fetchPOHeadersPaginated({
   
   if (status && status !== 'all') {
     query = query.eq('status', status);
+  }
+
+  if (customerMapped === 'mapped') {
+    query = query.eq('is_customer_mapped', true);
+  } else if (customerMapped === 'unmapped') {
+    query = query.eq('is_customer_mapped', false);
   }
   
   const { data: allData, error } = await query;

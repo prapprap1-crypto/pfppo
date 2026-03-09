@@ -9,16 +9,8 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Eye, FileCheck, Download, Search, Filter, Trash2, Building2, CheckCircle2, AlertTriangle, MapPin, Pencil, User, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Eye, FileCheck, Download, Trash2, CheckCircle2, AlertTriangle, Pencil, User, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -51,10 +43,6 @@ export function POTable({ poList, onRefresh }: POTableProps) {
   const { toast } = useToast();
   const { logAction } = usePOActionLog();
   const { isModerator } = useUserRole();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [customerMappingFilter, setCustomerMappingFilter] = useState<string>('all');
-  const [branchMappingFilter, setBranchMappingFilter] = useState<string>('all');
   const [editingPO, setEditingPO] = useState<POHeader | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>('createdAt');
@@ -76,30 +64,8 @@ export function POTable({ poList, onRefresh }: POTableProps) {
       : <ArrowDown className="w-4 h-4 ml-1" />;
   };
 
-  const filteredAndSortedList = useMemo(() => {
-    const filtered = poList.filter(po => {
-      const matchesSearch = 
-        po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        po.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        po.branch.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (po.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
-      
-      const matchesStatus = statusFilter === 'all' || po.status === statusFilter;
-      
-      const matchesCustomerMapping = 
-        customerMappingFilter === 'all' || 
-        (customerMappingFilter === 'mapped' && po.isCustomerMapped) ||
-        (customerMappingFilter === 'unmapped' && !po.isCustomerMapped);
-      
-      const matchesBranchMapping = 
-        branchMappingFilter === 'all' || 
-        (branchMappingFilter === 'mapped' && po.isBranchMapped) ||
-        (branchMappingFilter === 'unmapped' && !po.isBranchMapped);
-      
-      return matchesSearch && matchesStatus && matchesCustomerMapping && matchesBranchMapping;
-    });
-
-    return filtered.sort((a, b) => {
+  const sortedList = useMemo(() => {
+    return [...poList].sort((a, b) => {
       let comparison = 0;
       
       switch (sortField) {
@@ -128,7 +94,7 @@ export function POTable({ poList, onRefresh }: POTableProps) {
       
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [poList, searchTerm, statusFilter, customerMappingFilter, branchMappingFilter, sortField, sortDirection]);
+  }, [poList, sortField, sortDirection]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('th-TH', {
@@ -185,62 +151,6 @@ export function POTable({ poList, onRefresh }: POTableProps) {
 
   return (
     <div>
-      {/* Filters */}
-      <div className="p-4 border-b flex flex-wrap items-center gap-4">
-        <div className="relative flex-1 min-w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="ค้นหาเลข PO, ผู้จำหน่าย, หรือสาขา..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-muted-foreground" />
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="ทุกสถานะ" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">ทุกสถานะ</SelectItem>
-              <SelectItem value="NEW">พบไฟล์ใหม่</SelectItem>
-              <SelectItem value="IMPORTED">นำเข้าสำเร็จ</SelectItem>
-              <SelectItem value="NEED_REVIEW">รอตรวจสอบ</SelectItem>
-              <SelectItem value="VERIFIED">ตรวจสอบสำเร็จ</SelectItem>
-              <SelectItem value="EXPORTED">นำออกแล้ว</SelectItem>
-              <SelectItem value="ERROR">มีข้อผิดพลาด</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-muted-foreground" />
-          <Select value={customerMappingFilter} onValueChange={setCustomerMappingFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Mapping ลูกค้า" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">ลูกค้า: ทั้งหมด</SelectItem>
-              <SelectItem value="mapped">ลูกค้า: Mapped</SelectItem>
-              <SelectItem value="unmapped">ลูกค้า: ยังไม่ Mapped</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-muted-foreground" />
-          <Select value={branchMappingFilter} onValueChange={setBranchMappingFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Mapping สาขา" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">สาขา: ทั้งหมด</SelectItem>
-              <SelectItem value="mapped">สาขา: Mapped</SelectItem>
-              <SelectItem value="unmapped">สาขา: ยังไม่ Mapped</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
       {/* Table */}
       <div className="overflow-x-auto">
         <Table>
@@ -299,7 +209,7 @@ export function POTable({ poList, onRefresh }: POTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAndSortedList.map((po, index) => (
+            {sortedList.map((po, index) => (
               <TableRow 
                 key={po.id}
                 className="animate-fade-in hover:bg-muted/30"
