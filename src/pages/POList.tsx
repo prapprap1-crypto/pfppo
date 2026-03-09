@@ -173,6 +173,22 @@ const POList = () => {
               className="pl-9"
             />
           </div>
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="ทุกสถานะ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกสถานะ</SelectItem>
+                <SelectItem value="NEED_REVIEW">รอตรวจสอบ</SelectItem>
+                <SelectItem value="VERIFIED">ตรวจสอบสำเร็จ</SelectItem>
+                <SelectItem value="EXPORTED">นำออกแล้ว</SelectItem>
+                <SelectItem value="NEW">พบไฟล์ใหม่</SelectItem>
+                <SelectItem value="ERROR">มีข้อผิดพลาด</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <p className="text-muted-foreground text-sm">ทั้งหมด {totalItems} รายการ</p>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
