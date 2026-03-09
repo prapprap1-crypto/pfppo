@@ -73,30 +73,8 @@ export function POTable({ poList, onRefresh }: POTableProps) {
       : <ArrowDown className="w-4 h-4 ml-1" />;
   };
 
-  const filteredAndSortedList = useMemo(() => {
-    const filtered = poList.filter(po => {
-      const matchesSearch = 
-        po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        po.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        po.branch.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (po.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
-      
-      const matchesStatus = statusFilter === 'all' || po.status === statusFilter;
-      
-      const matchesCustomerMapping = 
-        customerMappingFilter === 'all' || 
-        (customerMappingFilter === 'mapped' && po.isCustomerMapped) ||
-        (customerMappingFilter === 'unmapped' && !po.isCustomerMapped);
-      
-      const matchesBranchMapping = 
-        branchMappingFilter === 'all' || 
-        (branchMappingFilter === 'mapped' && po.isBranchMapped) ||
-        (branchMappingFilter === 'unmapped' && !po.isBranchMapped);
-      
-      return matchesSearch && matchesStatus && matchesCustomerMapping && matchesBranchMapping;
-    });
-
-    return filtered.sort((a, b) => {
+  const sortedList = useMemo(() => {
+    return [...poList].sort((a, b) => {
       let comparison = 0;
       
       switch (sortField) {
@@ -125,7 +103,7 @@ export function POTable({ poList, onRefresh }: POTableProps) {
       
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [poList, searchTerm, statusFilter, customerMappingFilter, branchMappingFilter, sortField, sortDirection]);
+  }, [poList, sortField, sortDirection]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('th-TH', {
