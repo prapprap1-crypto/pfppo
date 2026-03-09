@@ -51,10 +51,7 @@ export function POTable({ poList, onRefresh }: POTableProps) {
   const { toast } = useToast();
   const { logAction } = usePOActionLog();
   const { isModerator } = useUserRole();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [customerMappingFilter, setCustomerMappingFilter] = useState<string>('all');
-  const [branchMappingFilter, setBranchMappingFilter] = useState<string>('all');
+  const [editingPO, setEditingPO] = useState<POHeader | null>(null);
   const [editingPO, setEditingPO] = useState<POHeader | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>('createdAt');
