@@ -40,7 +40,8 @@ const POList = () => {
       const result = await fetchPOHeadersPaginated({
         page: currentPage,
         pageSize,
-        search: searchTerm
+        search: searchTerm,
+        status: statusFilter
       });
       
       const headers = result.data;
