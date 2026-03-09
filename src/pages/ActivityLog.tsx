@@ -243,7 +243,7 @@ export default function ActivityLog() {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, 'dd/MM/yy', { locale: th }) : 'เริ่มต้น'}
+                    {startDate ? format(startDate, 'dd/MM/yyyy') : 'เริ่มต้น'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
