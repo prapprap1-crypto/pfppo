@@ -170,8 +170,17 @@ const POList = () => {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              className="pl-9"
+              className="pl-9 pr-9"
             />
+            {(searchInput || searchTerm || statusFilter !== 'all') && (
+              <button
+                onClick={() => { setSearchInput(''); setSearchTerm(''); setStatusFilter('all'); setCurrentPage(1); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                title="ล้างการค้นหา"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
