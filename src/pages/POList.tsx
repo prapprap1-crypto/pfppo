@@ -123,7 +123,7 @@ const POList = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchTerm]);
+  }, [currentPage, pageSize, searchTerm, statusFilter]);
 
   useEffect(() => {
     loadData();
