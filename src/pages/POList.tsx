@@ -31,7 +31,8 @@ const POList = () => {
       // Fetch paginated PO headers with optimized query
       const result = await fetchPOHeadersPaginated({
         page: currentPage,
-        pageSize
+        pageSize,
+        search: searchTerm
       });
       
       const headers = result.data;
