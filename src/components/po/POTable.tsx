@@ -217,7 +217,7 @@ export function POTable({ poList, onRefresh }: POTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAndSortedList.map((po, index) => (
+            {sortedList.map((po, index) => (
               <TableRow 
                 key={po.id}
                 className="animate-fade-in hover:bg-muted/30"
