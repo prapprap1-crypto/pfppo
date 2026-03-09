@@ -25,6 +25,7 @@ const POList = () => {
   const [unmappedProductsCount, setUnmappedProductsCount] = useState(0);
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
