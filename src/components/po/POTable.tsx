@@ -52,7 +52,6 @@ export function POTable({ poList, onRefresh }: POTableProps) {
   const { logAction } = usePOActionLog();
   const { isModerator } = useUserRole();
   const [editingPO, setEditingPO] = useState<POHeader | null>(null);
-  const [editingPO, setEditingPO] = useState<POHeader | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
