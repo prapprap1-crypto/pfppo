@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Upload, RefreshCw, Search, Filter, X, Building2, MapPin } from 'lucide-react';
+import { Upload, RefreshCw, Search, Filter, X, Building2, MapPin, Package, Calendar } from 'lucide-react';
 import { POHeader } from '@/types/po';
 import { POPagination } from '@/components/po/POPagination';
 
@@ -28,6 +28,9 @@ const POList = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [customerMappingFilter, setCustomerMappingFilter] = useState('all');
   const [branchMappingFilter, setBranchMappingFilter] = useState('all');
+  const [productMappingFilter, setProductMappingFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,10 +38,12 @@ const POList = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
+  // Track all mapped headers before client-side filtering for banner stats
+  const [allMappedHeaders, setAllMappedHeaders] = useState<POHeader[]>([]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch paginated PO headers with optimized query
       const result = await fetchPOHeadersPaginated({
         page: currentPage,
         pageSize,
@@ -70,12 +75,11 @@ const POList = () => {
         }
       }
       
-      // Batch fetch branch mappings (avoids N+1 queries)
+      // Batch fetch branch mappings
       const branchMappingsMap = await batchFetchBranchMappings(
         headers.map((h: any) => ({ customer_name: h.customer_name, branch: h.branch }))
       );
       
-      // Map headers with branch mapping data and uploader info (no N+1 queries now)
       const mappedHeaders = headers.map((h: any) => {
         const branchKey = `${h.customer_name}|||${h.branch}`;
         const branchMapping = branchMappingsMap.get(branchKey);
@@ -108,17 +112,33 @@ const POList = () => {
           uploaderEmail: uploaderProfile?.email || undefined,
         };
       });
-      // Apply client-side branch mapping filter (since isBranchMapped is derived)
+
+      setAllMappedHeaders(mappedHeaders);
+
+      // Apply client-side filters
       let filteredHeaders = mappedHeaders;
+      
+      // Branch mapping filter
       if (branchMappingFilter === 'mapped') {
-        filteredHeaders = mappedHeaders.filter(h => h.isBranchMapped);
+        filteredHeaders = filteredHeaders.filter(h => h.isBranchMapped);
       } else if (branchMappingFilter === 'unmapped') {
-        filteredHeaders = mappedHeaders.filter(h => !h.isBranchMapped);
+        filteredHeaders = filteredHeaders.filter(h => !h.isBranchMapped);
+      }
+
+      // Date range filter
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        filteredHeaders = filteredHeaders.filter(h => new Date(h.dueDate) >= fromDate);
+      }
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        filteredHeaders = filteredHeaders.filter(h => new Date(h.dueDate) <= toDate);
       }
       
       setPOHeaders(filteredHeaders);
 
-      // Count unmapped products (only on first page load or refresh)
+      // Count unmapped products
       if (currentPage === 1) {
         const { count } = await supabase
           .from('po_items')
@@ -127,13 +147,35 @@ const POList = () => {
         
         setUnmappedProductsCount(count || 0);
       }
+
+      // Product mapping filter: need to check PO-level product mapping status
+      if (productMappingFilter !== 'all') {
+        const poIds = filteredHeaders.map(h => h.id);
+        if (poIds.length > 0) {
+          // Fetch unmapped item counts per PO
+          const { data: unmappedItems } = await supabase
+            .from('po_items')
+            .select('po_id, is_mapped')
+            .in('po_id', poIds)
+            .eq('is_mapped', false);
+          
+          const posWithUnmappedItems = new Set((unmappedItems || []).map(i => i.po_id));
+          
+          if (productMappingFilter === 'mapped') {
+            filteredHeaders = filteredHeaders.filter(h => !posWithUnmappedItems.has(h.id));
+          } else if (productMappingFilter === 'unmapped') {
+            filteredHeaders = filteredHeaders.filter(h => posWithUnmappedItems.has(h.id));
+          }
+          setPOHeaders(filteredHeaders);
+        }
+      }
     } catch (error) {
       console.error('Error loading PO headers:', error);
       setPOHeaders([]);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchTerm, statusFilter, customerMappingFilter, branchMappingFilter]);
+  }, [currentPage, pageSize, searchTerm, statusFilter, customerMappingFilter, branchMappingFilter, productMappingFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     loadData();
@@ -159,19 +201,49 @@ const POList = () => {
     }
   };
 
-  // Calculate mapping stats from current page data
+  const clearAllFilters = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    setStatusFilter('all');
+    setCustomerMappingFilter('all');
+    setBranchMappingFilter('all');
+    setProductMappingFilter('all');
+    setDateFrom('');
+    setDateTo('');
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = searchInput || searchTerm || statusFilter !== 'all' || customerMappingFilter !== 'all' || branchMappingFilter !== 'all' || productMappingFilter !== 'all' || dateFrom || dateTo;
+
+  // Calculate mapping stats with PO detail info
   const mappingStats = useMemo(() => ({
-    totalPOs: totalItems, // Use total from server
-    unmappedCustomer: poHeaders.filter(p => p.customerName && !p.isCustomerMapped).length,
-    unmappedBranch: poHeaders.filter(p => p.branch && !p.isBranchMapped).length,
+    totalPOs: totalItems,
+    unmappedCustomer: allMappedHeaders.filter(p => p.customerName && !p.isCustomerMapped).length,
+    unmappedBranch: allMappedHeaders.filter(p => p.branch && !p.isBranchMapped).length,
     unmappedProducts: unmappedProductsCount,
-  }), [poHeaders, unmappedProductsCount, totalItems]);
+    unmappedCustomerPOs: allMappedHeaders
+      .filter(p => p.customerName && !p.isCustomerMapped)
+      .map(p => ({ id: p.id, poNumber: p.poNumber, customerName: p.customerName, branch: p.branch })),
+    unmappedBranchPOs: allMappedHeaders
+      .filter(p => p.branch && !p.isBranchMapped)
+      .map(p => ({ id: p.id, poNumber: p.poNumber, customerName: p.customerName, branch: p.branch })),
+  }), [allMappedHeaders, unmappedProductsCount, totalItems]);
+
+  const formatDateDisplay = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
   return (
     <MainLayout title="รายการ PO" subtitle="จัดการใบสั่งซื้อทั้งหมด">
       <div className="space-y-6">
         <MappingAlertBanner stats={mappingStats} />
         
+        {/* Row 1: Search + Status + Customer + Branch filters */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="relative flex-1 min-w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -182,9 +254,9 @@ const POList = () => {
               onKeyDown={handleSearchKeyDown}
               className="pl-9 pr-9"
             />
-            {(searchInput || searchTerm || statusFilter !== 'all' || customerMappingFilter !== 'all' || branchMappingFilter !== 'all') && (
+            {hasActiveFilters && (
               <button
-                onClick={() => { setSearchInput(''); setSearchTerm(''); setStatusFilter('all'); setCustomerMappingFilter('all'); setBranchMappingFilter('all'); setCurrentPage(1); }}
+                onClick={clearAllFilters}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 title="ล้างการค้นหา"
               >
@@ -235,6 +307,51 @@ const POList = () => {
             </Select>
           </div>
           <p className="text-muted-foreground text-sm">ทั้งหมด {totalItems} รายการ</p>
+        </div>
+
+        {/* Row 2: Date range + Product mapping + Actions */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">วันครบกำหนด:</span>
+            <div className="relative">
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
+                className="w-40 text-sm"
+                placeholder="เริ่มต้น"
+              />
+            </div>
+            <span className="text-muted-foreground">-</span>
+            <div className="relative">
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
+                className="w-40 text-sm"
+                placeholder="สิ้นสุด"
+              />
+            </div>
+            {(dateFrom || dateTo) && (
+              <span className="text-xs text-muted-foreground">
+                {dateFrom && formatDateDisplay(dateFrom)} {dateFrom && dateTo && '~'} {dateTo && formatDateDisplay(dateTo)}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Package className="w-4 h-4 text-muted-foreground" />
+            <Select value={productMappingFilter} onValueChange={(val) => { setProductMappingFilter(val); setCurrentPage(1); }}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="สินค้า: ทั้งหมด" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">สินค้า: ทั้งหมด</SelectItem>
+                <SelectItem value="mapped">สินค้า: Mapped ครบ</SelectItem>
+                <SelectItem value="unmapped">สินค้า: ยังไม่ Mapped</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
