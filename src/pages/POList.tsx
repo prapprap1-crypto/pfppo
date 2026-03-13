@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Upload, RefreshCw, Search, Filter, X, Building2, MapPin, Package, Calendar } from 'lucide-react';
+import { Upload, RefreshCw, Search, Filter, X, Building2, MapPin, Package } from 'lucide-react';
+import { DateInput } from '@/components/ui/date-input';
 import { POHeader } from '@/types/po';
 import { POPagination } from '@/components/po/POPagination';
 
@@ -229,14 +230,8 @@ const POList = () => {
       .map(p => ({ id: p.id, poNumber: p.poNumber, customerName: p.customerName, branch: p.branch })),
   }), [allMappedHeaders, unmappedProductsCount, totalItems]);
 
-  const formatDateDisplay = (dateStr: string) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
+
+
 
   return (
     <MainLayout title="รายการ PO" subtitle="จัดการใบสั่งซื้อทั้งหมด">
@@ -312,32 +307,20 @@ const POList = () => {
         {/* Row 2: Date range + Product mapping + Actions */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">วันครบกำหนด:</span>
-            <div className="relative">
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
-                className="w-40 text-sm"
-                placeholder="เริ่มต้น"
-              />
-            </div>
+            <DateInput
+              value={dateFrom}
+              onChange={(val) => { setDateFrom(val); setCurrentPage(1); }}
+              placeholder="เริ่มต้น"
+              className="w-40"
+            />
             <span className="text-muted-foreground">-</span>
-            <div className="relative">
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
-                className="w-40 text-sm"
-                placeholder="สิ้นสุด"
-              />
-            </div>
-            {(dateFrom || dateTo) && (
-              <span className="text-xs text-muted-foreground">
-                {dateFrom && formatDateDisplay(dateFrom)} {dateFrom && dateTo && '~'} {dateTo && formatDateDisplay(dateTo)}
-              </span>
-            )}
+            <DateInput
+              value={dateTo}
+              onChange={(val) => { setDateTo(val); setCurrentPage(1); }}
+              placeholder="สิ้นสุด"
+              className="w-40"
+            />
           </div>
           <div className="flex items-center gap-2">
             <Package className="w-4 h-4 text-muted-foreground" />
