@@ -312,32 +312,21 @@ const POList = () => {
         {/* Row 2: Date range + Product mapping + Actions */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">วันครบกำหนด:</span>
-            <div className="relative">
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
-                className="w-40 text-sm"
-                placeholder="เริ่มต้น"
-              />
-            </div>
+            <DateInput
+              value={dateFrom}
+              onChange={(val) => { setDateFrom(val); setCurrentPage(1); }}
+              placeholder="เริ่มต้น"
+              className="w-40"
+            />
             <span className="text-muted-foreground">-</span>
-            <div className="relative">
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
-                className="w-40 text-sm"
-                placeholder="สิ้นสุด"
-              />
-            </div>
-            {(dateFrom || dateTo) && (
-              <span className="text-xs text-muted-foreground">
-                {dateFrom && formatDateDisplay(dateFrom)} {dateFrom && dateTo && '~'} {dateTo && formatDateDisplay(dateTo)}
-              </span>
-            )}
+            <DateInput
+              value={dateTo}
+              onChange={(val) => { setDateTo(val); setCurrentPage(1); }}
+              placeholder="สิ้นสุด"
+              className="w-40"
+            />
+          </div>
           </div>
           <div className="flex items-center gap-2">
             <Package className="w-4 h-4 text-muted-foreground" />
