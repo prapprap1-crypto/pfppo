@@ -321,35 +321,23 @@ export function ExportPanel({ poList }: ExportPanelProps) {
           </div>
           <div>
             <Label className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4" />
               วันครบกำหนด (เริ่มต้น)
             </Label>
-            <div className="space-y-1">
-              <Input 
-                type="date" 
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-              {dateFrom && (
-                <p className="text-xs text-muted-foreground">{formatDate(dateFrom)}</p>
-              )}
-            </div>
+            <DateInput
+              value={dateFrom}
+              onChange={setDateFrom}
+              placeholder="เริ่มต้น"
+            />
           </div>
           <div>
             <Label className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4" />
               วันครบกำหนด (สิ้นสุด)
             </Label>
-            <div className="space-y-1">
-              <Input 
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
-              {dateTo && (
-                <p className="text-xs text-muted-foreground">{formatDate(dateTo)}</p>
-              )}
-            </div>
+            <DateInput
+              value={dateTo}
+              onChange={setDateTo}
+              placeholder="สิ้นสุด"
+            />
           </div>
           <div>
             <Label className="mb-2 block">สาขา</Label>

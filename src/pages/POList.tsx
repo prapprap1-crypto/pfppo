@@ -230,14 +230,8 @@ const POList = () => {
       .map(p => ({ id: p.id, poNumber: p.poNumber, customerName: p.customerName, branch: p.branch })),
   }), [allMappedHeaders, unmappedProductsCount, totalItems]);
 
-  const formatDateDisplay = (dateStr: string) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
+
+
 
   return (
     <MainLayout title="รายการ PO" subtitle="จัดการใบสั่งซื้อทั้งหมด">
