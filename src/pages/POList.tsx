@@ -322,7 +322,6 @@ const POList = () => {
               className="w-40"
             />
           </div>
-          </div>
           <div className="flex items-center gap-2">
             <Package className="w-4 h-4 text-muted-foreground" />
             <Select value={productMappingFilter} onValueChange={(val) => { setProductMappingFilter(val); setCurrentPage(1); }}>

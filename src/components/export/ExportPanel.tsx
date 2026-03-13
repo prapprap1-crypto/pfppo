@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar, FileSpreadsheet, Filter, Eye } from 'lucide-react';
+import { FileSpreadsheet, Filter, Eye } from 'lucide-react';
+import { DateInput } from '@/components/ui/date-input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
