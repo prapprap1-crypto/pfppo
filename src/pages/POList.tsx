@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Upload, RefreshCw, Search, Filter, X, Building2, MapPin, Package, Calendar } from 'lucide-react';
+import { Upload, RefreshCw, Search, Filter, X, Building2, MapPin, Package } from 'lucide-react';
+import { DateInput } from '@/components/ui/date-input';
 import { POHeader } from '@/types/po';
 import { POPagination } from '@/components/po/POPagination';
 
