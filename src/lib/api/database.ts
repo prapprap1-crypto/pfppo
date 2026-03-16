@@ -45,9 +45,10 @@ export async function fetchPOHeadersPaginated({
   pageSize = 20,
   search = '',
   status = 'all',
-  customerMapped = 'all'
+  customerMapped = 'all',
+  dateFrom = '',
+  dateTo = ''
 }: FetchPOHeadersParams = {}): Promise<FetchPOHeadersResult> {
-  // Fetch ALL data first to sort properly, then paginate
   let query = supabase
     .from('po_headers')
     .select('*');
@@ -65,6 +66,13 @@ export async function fetchPOHeadersPaginated({
     query = query.eq('is_customer_mapped', true);
   } else if (customerMapped === 'unmapped') {
     query = query.eq('is_customer_mapped', false);
+  }
+
+  if (dateFrom) {
+    query = query.gte('due_date', dateFrom);
+  }
+  if (dateTo) {
+    query = query.lte('due_date', dateTo);
   }
   
   const { data: allData, error } = await query;
