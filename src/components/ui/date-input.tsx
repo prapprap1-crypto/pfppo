@@ -1,6 +1,14 @@
-import { useState, useRef, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
-import { Calendar } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { useState } from 'react';
 
 interface DateInputProps {
   value: string; // ISO format yyyy-mm-dd
@@ -9,12 +17,10 @@ interface DateInputProps {
   className?: string;
 }
 
-/**
- * Date input that displays dd/mm/yyyy format.
- * Internally stores value as yyyy-mm-dd for compatibility.
- */
 export function DateInput({ value, onChange, placeholder = 'dd/mm/yyyy', className = '' }: DateInputProps) {
-  const hiddenRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+
+  const dateValue = value ? new Date(value + 'T00:00:00') : undefined;
 
   const formatDisplay = (isoDate: string) => {
     if (!isoDate) return '';
@@ -22,34 +28,42 @@ export function DateInput({ value, onChange, placeholder = 'dd/mm/yyyy', classNa
     return `${d}/${m}/${y}`;
   };
 
-  const displayValue = formatDisplay(value);
-
-  const handleClick = () => {
-    hiddenRef.current?.showPicker?.();
-    hiddenRef.current?.focus();
+  const handleSelect = (date: Date | undefined) => {
+    if (date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      onChange(`${y}-${m}-${d}`);
+    } else {
+      onChange('');
+    }
+    setOpen(false);
   };
 
   return (
-    <div className={`relative ${className}`}>
-      {/* Visible display */}
-      <div
-        onClick={handleClick}
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer hover:bg-muted/50 transition-colors items-center gap-2"
-      >
-        <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
-        <span className={displayValue ? 'text-foreground' : 'text-muted-foreground'}>
-          {displayValue || placeholder}
-        </span>
-      </div>
-      {/* Hidden native date picker */}
-      <input
-        ref={hiddenRef}
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="absolute inset-0 opacity-0 cursor-pointer"
-        tabIndex={-1}
-      />
-    </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            'justify-start text-left font-normal h-10',
+            !value && 'text-muted-foreground',
+            className
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {value ? formatDisplay(value) : <span>{placeholder}</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={dateValue}
+          onSelect={handleSelect}
+          initialFocus
+          className={cn('p-3 pointer-events-auto')}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
