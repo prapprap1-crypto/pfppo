@@ -18,6 +18,8 @@ export interface FetchPOHeadersParams {
   search?: string;
   status?: string;
   customerMapped?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface FetchPOHeadersResult {
