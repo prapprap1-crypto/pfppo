@@ -50,7 +50,9 @@ const POList = () => {
         pageSize,
         search: searchTerm,
         status: statusFilter,
-        customerMapped: customerMappingFilter
+        customerMapped: customerMappingFilter,
+        dateFrom,
+        dateTo
       });
       
       const headers = result.data;
@@ -116,7 +118,7 @@ const POList = () => {
 
       setAllMappedHeaders(mappedHeaders);
 
-      // Apply client-side filters
+      // Apply client-side filters (only branch mapping - dates are now server-side)
       let filteredHeaders = mappedHeaders;
       
       // Branch mapping filter
@@ -124,17 +126,6 @@ const POList = () => {
         filteredHeaders = filteredHeaders.filter(h => h.isBranchMapped);
       } else if (branchMappingFilter === 'unmapped') {
         filteredHeaders = filteredHeaders.filter(h => !h.isBranchMapped);
-      }
-
-      // Date range filter
-      if (dateFrom) {
-        const fromDate = new Date(dateFrom);
-        filteredHeaders = filteredHeaders.filter(h => new Date(h.dueDate) >= fromDate);
-      }
-      if (dateTo) {
-        const toDate = new Date(dateTo);
-        toDate.setHours(23, 59, 59, 999);
-        filteredHeaders = filteredHeaders.filter(h => new Date(h.dueDate) <= toDate);
       }
       
       setPOHeaders(filteredHeaders);
