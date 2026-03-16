@@ -50,7 +50,9 @@ const POList = () => {
         pageSize,
         search: searchTerm,
         status: statusFilter,
-        customerMapped: customerMappingFilter
+        customerMapped: customerMappingFilter,
+        dateFrom,
+        dateTo
       });
       
       const headers = result.data;
