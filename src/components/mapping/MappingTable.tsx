@@ -86,6 +86,7 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
       vendorCode: mapping.vendorCode,
       vendorDesc: mapping.vendorDesc,
       unit: mapping.unit,
+      unitPrice: mapping.unitPrice ?? '',
       active: mapping.active,
     });
     setEditingId(mapping.id);
