@@ -217,13 +217,24 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
                     placeholder="ลูกชิ้นปลาภูเก็ต 500 กรัม"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <Label>หน่วย</Label>
                     <Input 
                       value={formData.unit}
                       onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                       placeholder="ลัง"
+                    />
+                  </div>
+                  <div>
+                    <Label>ราคาต่อหน่วย</Label>
+                    <Input 
+                      type="number"
+                      value={formData.unitPrice}
+                      onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value === '' ? '' : Number(e.target.value) })}
+                      placeholder="0.00"
+                      min={0}
+                      step={0.01}
                     />
                   </div>
                   <div className="flex items-center gap-3 pt-6">
