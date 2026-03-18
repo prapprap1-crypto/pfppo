@@ -897,9 +897,12 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                           <span 
                             className={cn(
                               isModerator && "cursor-pointer hover:text-primary",
-                              hasChanges && "text-primary font-semibold"
+                              hasChanges && "text-primary font-semibold",
+                              priceMismatch && "text-red-600 font-semibold",
+                              priceMatches && "text-green-600"
                             )}
                             onClick={() => isModerator && setEditingItemId(item.id)}
+                            title={hasMappingPrice ? `ราคาใน Mapping: ฿${formatCurrency(mappingPrice!)}` : 'ยังไม่มีราคาใน Mapping'}
                           >
                             ฿{formatCurrency(editedUnitPrice)}
                           </span>
