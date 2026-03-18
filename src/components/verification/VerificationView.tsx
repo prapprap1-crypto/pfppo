@@ -106,6 +106,11 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   }, []);
 
   useEffect(() => {
+    setLocalPO(po);
+    setRemark(po.remark || '');
+  }, [po]);
+
+  useEffect(() => {
     const loadPdfUrl = async () => {
       setPdfLoading(true);
       if (po.sourceFile) {
