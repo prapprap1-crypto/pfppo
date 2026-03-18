@@ -85,10 +85,25 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
     setLocalItems(items);
   }, [items]);
 
+  // Load mapping prices for price comparison
+  const loadMappingPrices = async () => {
+    try {
+      const mappings = await fetchProductMappings();
+      const priceMap = new Map<string, number | null>();
+      (mappings || []).forEach((m: any) => {
+        if (m.customer_code) {
+          priceMap.set(m.customer_code, m.unit_price != null ? Number(m.unit_price) : null);
+        }
+      });
+      setMappingPrices(priceMap);
+    } catch (error) {
+      console.error('Error loading mapping prices:', error);
+    }
+  };
+
   useEffect(() => {
-    setLocalPO(po);
-    setRemark(po.remark || '');
-  }, [po]);
+    loadMappingPrices();
+  }, []);
 
   useEffect(() => {
     const loadPdfUrl = async () => {
