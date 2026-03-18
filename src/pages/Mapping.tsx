@@ -49,6 +49,7 @@ const Mapping = () => {
         vendor_code: mapping.vendorCode || '',
         vendor_desc: mapping.vendorDesc || '',
         unit: mapping.unit || 'ลัง',
+        unit_price: mapping.unitPrice != null ? Number(mapping.unitPrice) : null,
         active: mapping.active ?? true,
       });
       
