@@ -23,7 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { POHeader, POItem } from '@/types/po';
-import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping, updatePOHeader, updatePOItem } from '@/lib/api/database';
+import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping, updatePOHeader, updatePOItem, fetchProductMappings } from '@/lib/api/database';
 import { supabase } from '@/integrations/supabase/client';
 import { usePOActionLog } from '@/hooks/usePOActionLog';
 import { useUserRole } from '@/hooks/useUserRole';
