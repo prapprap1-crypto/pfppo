@@ -75,7 +75,7 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
     } else {
       onAdd?.(formData);
     }
-    setFormData({ customerCode: '', customerDesc: '', vendorCode: '', vendorDesc: '', unit: '', active: true });
+    setFormData({ customerCode: '', customerDesc: '', vendorCode: '', vendorDesc: '', unit: '', unitPrice: '', active: true });
     setIsAddOpen(false);
   };
 
