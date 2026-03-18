@@ -1,0 +1,1 @@
+ALTER TABLE public.product_mappings ADD COLUMN unit_price numeric DEFAULT NULL;
