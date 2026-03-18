@@ -24,6 +24,7 @@ const Mapping = () => {
           vendorCode: m.vendor_code,
           vendorDesc: m.vendor_desc,
           unit: m.unit || 'ลัง',
+          unitPrice: m.unit_price != null ? Number(m.unit_price) : null,
           active: m.active ?? true,
           createdAt: m.created_at,
         })));
