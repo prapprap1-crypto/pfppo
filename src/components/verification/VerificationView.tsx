@@ -810,8 +810,18 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                   const editedUnitPrice = Number(getItemValue(item, 'unitPrice'));
                   const calculatedAmount = editedQuantity * editedUnitPrice;
 
+                  // Price comparison with mapping
+                  const mappingPrice = mappingPrices.get(item.customerProductCode);
+                  const hasMappingPrice = mappingPrice != null;
+                  const priceMatches = hasMappingPrice && Math.abs(item.unitPrice - mappingPrice) < 0.01;
+                  const priceMismatch = hasMappingPrice && !priceMatches;
+
                   return (
-                    <TableRow key={item.id} className={cn(isEditing && "bg-muted/50")}>
+                    <TableRow key={item.id} className={cn(
+                      isEditing && "bg-muted/50",
+                      !isEditing && priceMatches && "bg-green-50 dark:bg-green-950/20",
+                      !isEditing && priceMismatch && "bg-red-50 dark:bg-red-950/20"
+                    )}>
                       <TableCell className="font-medium">{index + 1}</TableCell>
                       <TableCell className="font-mono text-sm">
                         {isModerator && isEditing ? (
