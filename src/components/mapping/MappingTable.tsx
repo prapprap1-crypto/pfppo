@@ -57,6 +57,7 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
     vendorCode: '',
     vendorDesc: '',
     unit: '',
+    unitPrice: '' as string | number,
     active: true,
   });
 
