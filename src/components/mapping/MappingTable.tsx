@@ -69,11 +69,15 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
   );
 
   const handleSubmit = () => {
+    const submitData = {
+      ...formData,
+      unitPrice: formData.unitPrice === '' ? null : Number(formData.unitPrice),
+    };
     if (editingId) {
-      onEdit?.(editingId, formData);
+      onEdit?.(editingId, submitData);
       setEditingId(null);
     } else {
-      onAdd?.(formData);
+      onAdd?.(submitData);
     }
     setFormData({ customerCode: '', customerDesc: '', vendorCode: '', vendorDesc: '', unit: '', unitPrice: '', active: true });
     setIsAddOpen(false);
