@@ -267,6 +267,7 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
               <TableHead>รหัสสินค้าผู้ขาย</TableHead>
               <TableHead>รายละเอียดผู้ขาย</TableHead>
               <TableHead className="text-center">หน่วย</TableHead>
+              <TableHead className="text-right">ราคา/หน่วย</TableHead>
               <TableHead className="text-center">สถานะ</TableHead>
               <TableHead className="text-center w-24">การดำเนินการ</TableHead>
             </TableRow>
