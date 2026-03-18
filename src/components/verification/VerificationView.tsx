@@ -79,6 +79,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   const [remark, setRemark] = useState<string>(po.remark || '');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
+  const [mappingPrices, setMappingPrices] = useState<Map<string, number | null>>(new Map());
 
   useEffect(() => {
     setLocalItems(items);
