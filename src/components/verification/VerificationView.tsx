@@ -369,6 +369,9 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
         setLocalItems(mappedItems);
       }
 
+      // Reload mapping prices for comparison
+      await loadMappingPrices();
+
       toast({
         title: "อัปเดต Mapping สินค้าสำเร็จ",
         description: `อัปเดต ${result.updated} จาก ${result.total} รายการ`,
