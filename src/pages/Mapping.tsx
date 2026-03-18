@@ -75,6 +75,7 @@ const Mapping = () => {
         vendor_code: mapping.vendorCode,
         vendor_desc: mapping.vendorDesc,
         unit: mapping.unit,
+        unit_price: mapping.unitPrice != null ? Number(mapping.unitPrice) : null,
         active: mapping.active,
       });
       

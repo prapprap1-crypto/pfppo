@@ -395,6 +395,7 @@ export async function updateProductMapping(id: string, updates: Partial<{
   vendor_code: string;
   vendor_desc: string;
   unit: string;
+  unit_price: number | null;
   active: boolean;
 }>) {
   const { data, error } = await supabase
