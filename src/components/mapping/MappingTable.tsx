@@ -286,6 +286,9 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
                 <TableCell className="font-mono text-sm">{mapping.vendorCode}</TableCell>
                 <TableCell className="max-w-48 truncate">{mapping.vendorDesc}</TableCell>
                 <TableCell className="text-center">{mapping.unit}</TableCell>
+                <TableCell className="text-right font-mono">
+                  {mapping.unitPrice != null ? `฿${Number(mapping.unitPrice).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                </TableCell>
                 <TableCell className="text-center">
                   <Badge variant={mapping.active ? "default" : "secondary"}>
                     {mapping.active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
