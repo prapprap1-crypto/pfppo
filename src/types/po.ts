@@ -50,6 +50,7 @@ export interface ProductMapping {
   vendorCode: string;
   vendorDesc: string;
   unit: string;
+  unitPrice?: number | null;
   active: boolean;
   createdAt: string;
 }

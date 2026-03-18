@@ -23,7 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { POHeader, POItem } from '@/types/po';
-import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping, updatePOHeader, updatePOItem } from '@/lib/api/database';
+import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping, updatePOHeader, updatePOItem, fetchProductMappings } from '@/lib/api/database';
 import { supabase } from '@/integrations/supabase/client';
 import { usePOActionLog } from '@/hooks/usePOActionLog';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -79,10 +79,31 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   const [remark, setRemark] = useState<string>(po.remark || '');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
+  const [mappingPrices, setMappingPrices] = useState<Map<string, number | null>>(new Map());
 
   useEffect(() => {
     setLocalItems(items);
   }, [items]);
+
+  // Load mapping prices for price comparison
+  const loadMappingPrices = async () => {
+    try {
+      const mappings = await fetchProductMappings();
+      const priceMap = new Map<string, number | null>();
+      (mappings || []).forEach((m: any) => {
+        if (m.customer_code) {
+          priceMap.set(m.customer_code, m.unit_price != null ? Number(m.unit_price) : null);
+        }
+      });
+      setMappingPrices(priceMap);
+    } catch (error) {
+      console.error('Error loading mapping prices:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadMappingPrices();
+  }, []);
 
   useEffect(() => {
     setLocalPO(po);
@@ -347,6 +368,9 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
         }));
         setLocalItems(mappedItems);
       }
+
+      // Reload mapping prices for comparison
+      await loadMappingPrices();
 
       toast({
         title: "อัปเดต Mapping สินค้าสำเร็จ",
@@ -789,8 +813,18 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                   const editedUnitPrice = Number(getItemValue(item, 'unitPrice'));
                   const calculatedAmount = editedQuantity * editedUnitPrice;
 
+                  // Price comparison with mapping
+                  const mappingPrice = mappingPrices.get(item.customerProductCode);
+                  const hasMappingPrice = mappingPrice != null;
+                  const priceMatches = hasMappingPrice && Math.abs(item.unitPrice - mappingPrice) < 0.01;
+                  const priceMismatch = hasMappingPrice && !priceMatches;
+
                   return (
-                    <TableRow key={item.id} className={cn(isEditing && "bg-muted/50")}>
+                    <TableRow key={item.id} className={cn(
+                      isEditing && "bg-muted/50",
+                      !isEditing && priceMatches && "bg-green-50 dark:bg-green-950/20",
+                      !isEditing && priceMismatch && "bg-red-50 dark:bg-red-950/20"
+                    )}>
                       <TableCell className="font-medium">{index + 1}</TableCell>
                       <TableCell className="font-mono text-sm">
                         {isModerator && isEditing ? (
@@ -866,9 +900,12 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
                           <span 
                             className={cn(
                               isModerator && "cursor-pointer hover:text-primary",
-                              hasChanges && "text-primary font-semibold"
+                              hasChanges && "text-primary font-semibold",
+                              priceMismatch && "text-red-600 font-semibold",
+                              priceMatches && "text-green-600"
                             )}
                             onClick={() => isModerator && setEditingItemId(item.id)}
+                            title={hasMappingPrice ? `ราคาใน Mapping: ฿${formatCurrency(mappingPrice!)}` : 'ยังไม่มีราคาใน Mapping'}
                           >
                             ฿{formatCurrency(editedUnitPrice)}
                           </span>

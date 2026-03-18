@@ -57,6 +57,7 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
     vendorCode: '',
     vendorDesc: '',
     unit: '',
+    unitPrice: '' as string | number,
     active: true,
   });
 
@@ -68,13 +69,17 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
   );
 
   const handleSubmit = () => {
+    const submitData = {
+      ...formData,
+      unitPrice: formData.unitPrice === '' ? null : Number(formData.unitPrice),
+    };
     if (editingId) {
-      onEdit?.(editingId, formData);
+      onEdit?.(editingId, submitData);
       setEditingId(null);
     } else {
-      onAdd?.(formData);
+      onAdd?.(submitData);
     }
-    setFormData({ customerCode: '', customerDesc: '', vendorCode: '', vendorDesc: '', unit: '', active: true });
+    setFormData({ customerCode: '', customerDesc: '', vendorCode: '', vendorDesc: '', unit: '', unitPrice: '', active: true });
     setIsAddOpen(false);
   };
 
@@ -85,6 +90,7 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
       vendorCode: mapping.vendorCode,
       vendorDesc: mapping.vendorDesc,
       unit: mapping.unit,
+      unitPrice: mapping.unitPrice ?? '',
       active: mapping.active,
     });
     setEditingId(mapping.id);
@@ -215,13 +221,24 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
                     placeholder="ลูกชิ้นปลาภูเก็ต 500 กรัม"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <Label>หน่วย</Label>
                     <Input 
                       value={formData.unit}
                       onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                       placeholder="ลัง"
+                    />
+                  </div>
+                  <div>
+                    <Label>ราคาต่อหน่วย</Label>
+                    <Input 
+                      type="number"
+                      value={formData.unitPrice}
+                      onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value === '' ? '' : Number(e.target.value) })}
+                      placeholder="0.00"
+                      min={0}
+                      step={0.01}
                     />
                   </div>
                   <div className="flex items-center gap-3 pt-6">
@@ -254,6 +271,7 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
               <TableHead>รหัสสินค้าผู้ขาย</TableHead>
               <TableHead>รายละเอียดผู้ขาย</TableHead>
               <TableHead className="text-center">หน่วย</TableHead>
+              <TableHead className="text-right">ราคา/หน่วย</TableHead>
               <TableHead className="text-center">สถานะ</TableHead>
               <TableHead className="text-center w-24">การดำเนินการ</TableHead>
             </TableRow>
@@ -272,6 +290,9 @@ export function MappingTable({ mappings, onAdd, onEdit, onDelete, onBulkImport }
                 <TableCell className="font-mono text-sm">{mapping.vendorCode}</TableCell>
                 <TableCell className="max-w-48 truncate">{mapping.vendorDesc}</TableCell>
                 <TableCell className="text-center">{mapping.unit}</TableCell>
+                <TableCell className="text-right font-mono">
+                  {mapping.unitPrice != null ? `฿${Number(mapping.unitPrice).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                </TableCell>
                 <TableCell className="text-center">
                   <Badge variant={mapping.active ? "default" : "secondary"}>
                     {mapping.active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}

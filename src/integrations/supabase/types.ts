@@ -420,6 +420,7 @@ export type Database = {
           customer_desc: string
           id: string
           unit: string | null
+          unit_price: number | null
           updated_at: string
           vendor_code: string
           vendor_desc: string
@@ -431,6 +432,7 @@ export type Database = {
           customer_desc: string
           id?: string
           unit?: string | null
+          unit_price?: number | null
           updated_at?: string
           vendor_code: string
           vendor_desc: string
@@ -442,6 +444,7 @@ export type Database = {
           customer_desc?: string
           id?: string
           unit?: string | null
+          unit_price?: number | null
           updated_at?: string
           vendor_code?: string
           vendor_desc?: string

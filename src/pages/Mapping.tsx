@@ -24,6 +24,7 @@ const Mapping = () => {
           vendorCode: m.vendor_code,
           vendorDesc: m.vendor_desc,
           unit: m.unit || 'ลัง',
+          unitPrice: m.unit_price != null ? Number(m.unit_price) : null,
           active: m.active ?? true,
           createdAt: m.created_at,
         })));
@@ -48,6 +49,7 @@ const Mapping = () => {
         vendor_code: mapping.vendorCode || '',
         vendor_desc: mapping.vendorDesc || '',
         unit: mapping.unit || 'ลัง',
+        unit_price: mapping.unitPrice != null ? Number(mapping.unitPrice) : null,
         active: mapping.active ?? true,
       });
       
@@ -73,6 +75,7 @@ const Mapping = () => {
         vendor_code: mapping.vendorCode,
         vendor_desc: mapping.vendorDesc,
         unit: mapping.unit,
+        unit_price: mapping.unitPrice != null ? Number(mapping.unitPrice) : null,
         active: mapping.active,
       });
       
