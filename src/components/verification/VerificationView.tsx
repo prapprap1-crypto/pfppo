@@ -719,6 +719,22 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
             )}
           </div>
           <div>
+            <span className="text-muted-foreground">รวมรายการทั้งหมด:</span>
+            <p className={cn(
+              "font-medium",
+              Math.abs(calculatedNetTotal - localPO.netTotal) < 0.01
+                ? "text-green-600"
+                : "text-red-600"
+            )}>
+              ฿{formatCurrency(calculatedNetTotal)}
+              {Math.abs(calculatedNetTotal - localPO.netTotal) >= 0.01 && (
+                <span className="text-xs ml-1">
+                  ({calculatedNetTotal > localPO.netTotal ? '+' : ''}{formatCurrency(calculatedNetTotal - localPO.netTotal)})
+                </span>
+              )}
+            </p>
+          </div>
+          <div>
             <span className="text-muted-foreground">ภาษีมูลค่าเพิ่ม 7%:</span>
             {isModerator ? (
               <Input
