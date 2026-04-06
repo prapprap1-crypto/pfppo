@@ -2,13 +2,26 @@ import { supabase } from '@/integrations/supabase/client';
 
 // PO Headers
 export async function fetchPOHeaders() {
-  const { data, error } = await supabase
-    .from('po_headers')
-    .select('*')
-    .order('created_at', { ascending: false });
+  // Fetch all PO headers using pagination to avoid the 1000 row limit
+  const allData: any[] = [];
+  let from = 0;
+  const batchSize = 1000;
   
-  if (error) throw error;
-  return data;
+  while (true) {
+    const { data, error } = await supabase
+      .from('po_headers')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(from, from + batchSize - 1);
+    
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData.push(...data);
+    if (data.length < batchSize) break;
+    from += batchSize;
+  }
+  
+  return allData;
 }
 
 // Fetch PO headers with pagination, optimized for performance
@@ -49,54 +62,38 @@ export async function fetchPOHeadersPaginated({
   dateFrom = '',
   dateTo = ''
 }: FetchPOHeadersParams = {}): Promise<FetchPOHeadersResult> {
-  let query = supabase
-    .from('po_headers')
-    .select('*');
-  
-  if (search.trim()) {
-    const term = `%${search.trim()}%`;
-    query = query.or(`po_number.ilike.${term},customer_name.ilike.${term},branch.ilike.${term},supplier_name.ilike.${term}`);
-  }
-  
-  if (status && status !== 'all') {
-    query = query.eq('status', status);
-  }
+  const applyFilters = (q: any) => {
+    if (search.trim()) {
+      const term = `%${search.trim()}%`;
+      q = q.or(`po_number.ilike.${term},customer_name.ilike.${term},branch.ilike.${term},supplier_name.ilike.${term}`);
+    }
+    if (status && status !== 'all') q = q.eq('status', status);
+    if (customerMapped === 'mapped') q = q.eq('is_customer_mapped', true);
+    else if (customerMapped === 'unmapped') q = q.eq('is_customer_mapped', false);
+    if (dateFrom) q = q.gte('due_date', dateFrom);
+    if (dateTo) q = q.lte('due_date', dateTo);
+    return q;
+  };
 
-  if (customerMapped === 'mapped') {
-    query = query.eq('is_customer_mapped', true);
-  } else if (customerMapped === 'unmapped') {
-    query = query.eq('is_customer_mapped', false);
-  }
-
-  if (dateFrom) {
-    query = query.gte('due_date', dateFrom);
-  }
-  if (dateTo) {
-    query = query.lte('due_date', dateTo);
-  }
-  
-  const { data: allData, error } = await query;
-  
-  if (error) throw error;
-  
-  // Sort all data by status priority first, then by PO number
-  const sortedData = (allData || []).sort((a, b) => {
-    const priorityA = STATUS_PRIORITY[a.status] ?? 99;
-    const priorityB = STATUS_PRIORITY[b.status] ?? 99;
-    
-    if (priorityA !== priorityB) return priorityA - priorityB;
-    
-    // Then by PO number
-    return a.po_number.localeCompare(b.po_number, 'th');
-  });
-  
-  // Calculate pagination
-  const totalCount = sortedData.length;
   const offset = (page - 1) * pageSize;
-  const paginatedData = sortedData.slice(offset, offset + pageSize);
-  
+
+  const [{ count, error: countError }, { data, error }] = await Promise.all([
+    applyFilters(supabase.from('po_headers').select('*', { count: 'exact', head: true })),
+    applyFilters(
+      supabase.from('po_headers').select('*')
+        .order('status', { ascending: true })
+        .order('po_number', { ascending: true })
+        .range(offset, offset + pageSize - 1)
+    ),
+  ]);
+
+  if (countError) throw countError;
+  if (error) throw error;
+
+  const totalCount = count || 0;
+
   return {
-    data: paginatedData,
+    data: data || [],
     total: totalCount,
     page,
     pageSize,
