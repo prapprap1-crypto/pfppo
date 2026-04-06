@@ -28,6 +28,7 @@ interface ExportPanelProps {
 }
 
 export function ExportPanel({ poList }: ExportPanelProps) {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { logBulkAction } = usePOActionLog();
   const [dateFrom, setDateFrom] = useState('');
