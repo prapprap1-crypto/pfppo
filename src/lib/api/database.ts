@@ -2,13 +2,26 @@ import { supabase } from '@/integrations/supabase/client';
 
 // PO Headers
 export async function fetchPOHeaders() {
-  const { data, error } = await supabase
-    .from('po_headers')
-    .select('*')
-    .order('created_at', { ascending: false });
+  // Fetch all PO headers using pagination to avoid the 1000 row limit
+  const allData: any[] = [];
+  let from = 0;
+  const batchSize = 1000;
   
-  if (error) throw error;
-  return data;
+  while (true) {
+    const { data, error } = await supabase
+      .from('po_headers')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(from, from + batchSize - 1);
+    
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData.push(...data);
+    if (data.length < batchSize) break;
+    from += batchSize;
+  }
+  
+  return allData;
 }
 
 // Fetch PO headers with pagination, optimized for performance
