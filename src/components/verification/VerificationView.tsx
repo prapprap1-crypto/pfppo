@@ -141,7 +141,9 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   }, [localItems]);
 
   const formatCurrency = (value: number) => {
-    return value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const str = value.toString();
+    const decimals = str.includes('.') ? str.split('.')[1].length : 0;
+    return value.toLocaleString('th-TH', { minimumFractionDigits: Math.max(decimals, 2), maximumFractionDigits: 20 });
   };
 
   // Handle summary field edits (net_total, vat, grand_total)
