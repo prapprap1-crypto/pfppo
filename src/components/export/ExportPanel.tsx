@@ -72,97 +72,87 @@ export function ExportPanel({ poList }: ExportPanelProps) {
   };
 
   const fetchExportItems = async (): Promise<ExportItem[]> => {
-    const allItems: ExportItem[] = [];
+    const selectedPOData = filteredPOs.filter(p => selectedPOs.includes(p.id));
+    if (selectedPOData.length === 0) return [];
 
-    for (const poId of selectedPOs) {
-      const po = filteredPOs.find(p => p.id === poId);
-      if (!po) continue;
-      
-      // Fetch customer mapping data for this PO's customer with explicit joins
-      let warehouseData: { code: string; name: string } | null = null;
-      let vehiclePositionData: { code: string; name: string } | null = null;
-      let transportCodeData: { code: string; name: string } | null = null;
-      let branchData: { vendor_branch_code: string | null; vendor_branch_name: string | null } | null = null;
-      let vatType = 1;
-      let customerMappingId: string | null = null;
-      
-      let salespersonData: { code: string; name: string } | null = null;
-      
-      if (po.vendorCustomerCode) {
-        const { data: customerMapping } = await supabase
-          .from('customer_mappings')
-          .select('id, vat_type, salesperson_id')
-          .eq('vendor_customer_code', po.vendorCustomerCode)
-          .maybeSingle();
-        
-        if (customerMapping) {
-          customerMappingId = customerMapping.id;
-          vatType = customerMapping.vat_type ?? 1;
-          
-          // Fetch salesperson from customer mapping
-          if (customerMapping.salesperson_id) {
-            const { data: sp } = await supabase
-              .from('salespersons')
-              .select('code, name')
-              .eq('id', customerMapping.salesperson_id)
-              .maybeSingle();
-            salespersonData = sp;
-          }
-        }
-      }
-      
-      // Fetch branch mapping - warehouse, vehicle_position, transport_code are now on branch level
+    // 1. Batch fetch all items for selected POs
+    const { data: allItemsData } = await supabase
+      .from('po_items')
+      .select('*')
+      .in('po_id', selectedPOs);
+
+    // 2. Collect unique vendor_customer_codes
+    const vendorCodes = [...new Set(selectedPOData.map(po => po.vendorCustomerCode).filter(Boolean))] as string[];
+
+    // 3. Batch fetch customer mappings
+    let customerMappingsMap = new Map<string, { id: string; vat_type: number | null; salesperson_id: string | null }>();
+    if (vendorCodes.length > 0) {
+      const { data: mappings } = await supabase
+        .from('customer_mappings')
+        .select('id, vendor_customer_code, vat_type, salesperson_id')
+        .in('vendor_customer_code', vendorCodes);
+      (mappings || []).forEach(m => customerMappingsMap.set(m.vendor_customer_code, m));
+    }
+
+    // 4. Batch fetch salespersons
+    const salespersonIds = [...new Set([...customerMappingsMap.values()].map(m => m.salesperson_id).filter(Boolean))] as string[];
+    let salespersonMap = new Map<string, { code: string; name: string }>();
+    if (salespersonIds.length > 0) {
+      const { data: sps } = await supabase.from('salespersons').select('id, code, name').in('id', salespersonIds);
+      (sps || []).forEach(sp => salespersonMap.set(sp.id, { code: sp.code, name: sp.name }));
+    }
+
+    // 5. Batch fetch branch mappings
+    const customerMappingIds = [...new Set([...customerMappingsMap.values()].map(m => m.id))];
+    let branchMappingsMap = new Map<string, any>();
+    if (customerMappingIds.length > 0) {
+      const { data: branchMappings } = await supabase
+        .from('customer_branch_mappings')
+        .select('customer_mapping_id, branch, vendor_branch_code, vendor_branch_name, warehouse_id, vehicle_position_id, transport_code_id')
+        .in('customer_mapping_id', customerMappingIds)
+        .eq('active', true);
+      (branchMappings || []).forEach(bm => {
+        branchMappingsMap.set(`${bm.customer_mapping_id}|${bm.branch}`, bm);
+      });
+    }
+
+    // 6. Collect all referenced setting IDs and batch fetch
+    const warehouseIds = new Set<string>();
+    const vehiclePositionIds = new Set<string>();
+    const transportCodeIds = new Set<string>();
+    branchMappingsMap.forEach(bm => {
+      if (bm.warehouse_id) warehouseIds.add(bm.warehouse_id);
+      if (bm.vehicle_position_id) vehiclePositionIds.add(bm.vehicle_position_id);
+      if (bm.transport_code_id) transportCodeIds.add(bm.transport_code_id);
+    });
+
+    const [whResult, vpResult, tcResult] = await Promise.all([
+      warehouseIds.size > 0 ? supabase.from('warehouses').select('id, code, name').in('id', [...warehouseIds]) : { data: [] },
+      vehiclePositionIds.size > 0 ? supabase.from('vehicle_positions').select('id, code, name').in('id', [...vehiclePositionIds]) : { data: [] },
+      transportCodeIds.size > 0 ? supabase.from('transport_codes').select('id, code, name').in('id', [...transportCodeIds]) : { data: [] },
+    ]);
+
+    const whMap = new Map((whResult.data || []).map(w => [w.id, w]));
+    const vpMap = new Map((vpResult.data || []).map(v => [v.id, v]));
+    const tcMap = new Map((tcResult.data || []).map(t => [t.id, t]));
+
+    // 7. Assemble items
+    const allItems: ExportItem[] = [];
+    for (const po of selectedPOData) {
+      const cm = po.vendorCustomerCode ? customerMappingsMap.get(po.vendorCustomerCode) : null;
+      const vatType = cm?.vat_type ?? 1;
+      const sp = cm?.salesperson_id ? salespersonMap.get(cm.salesperson_id) : null;
+      const bm = cm ? branchMappingsMap.get(`${cm.id}|${po.branch}`) : null;
+
       let vendorBranchCode = po.vendorBranchCode || '';
-      let vendorBranchName = '';
-      
-      if (customerMappingId && po.branch) {
-        // Try to find branch mapping from customer_branch_mappings table
-        const { data: branchMapping } = await supabase
-          .from('customer_branch_mappings')
-          .select('vendor_branch_code, vendor_branch_name, warehouse_id, vehicle_position_id, transport_code_id')
-          .eq('customer_mapping_id', customerMappingId)
-          .eq('branch', po.branch)
-          .eq('active', true)
-          .maybeSingle();
-        
-        if (branchMapping) {
-          if (!vendorBranchCode) {
-            vendorBranchCode = branchMapping.vendor_branch_code || '';
-            vendorBranchName = branchMapping.vendor_branch_name || '';
-          }
-          
-          // Fetch warehouse, vehicle position, transport code from branch mapping
-          if (branchMapping.warehouse_id) {
-            const { data: wh } = await supabase
-              .from('warehouses')
-              .select('code, name')
-              .eq('id', branchMapping.warehouse_id)
-              .maybeSingle();
-            warehouseData = wh;
-          }
-          
-          if (branchMapping.vehicle_position_id) {
-            const { data: vp } = await supabase
-              .from('vehicle_positions')
-              .select('code, name')
-              .eq('id', branchMapping.vehicle_position_id)
-              .maybeSingle();
-            vehiclePositionData = vp;
-          }
-          
-          if (branchMapping.transport_code_id) {
-            const { data: tc } = await supabase
-              .from('transport_codes')
-              .select('code, name')
-              .eq('id', branchMapping.transport_code_id)
-              .maybeSingle();
-            transportCodeData = tc;
-          }
-        }
-      }
-      
-      const items = await fetchPOItems(poId);
-      for (const item of items) {
+      if (!vendorBranchCode && bm) vendorBranchCode = bm.vendor_branch_code || '';
+
+      const wh = bm?.warehouse_id ? whMap.get(bm.warehouse_id) : null;
+      const vp = bm?.vehicle_position_id ? vpMap.get(bm.vehicle_position_id) : null;
+      const tc = bm?.transport_code_id ? tcMap.get(bm.transport_code_id) : null;
+
+      const poItems = (allItemsData || []).filter(i => i.po_id === po.id);
+      for (const item of poItems) {
         allItems.push({
           po_number: po.poNumber,
           due_date: po.dueDate,
@@ -174,19 +164,17 @@ export function ExportPanel({ poList }: ExportPanelProps) {
           unit: item.unit || 'ลัง',
           unit_price: item.unit_price,
           amount: item.amount,
-          // Customer mapping fields
           vendor_branch_code: vendorBranchCode,
-          warehouse_code: warehouseData?.code || '',
-          warehouse_name: warehouseData?.name || '',
-          vehicle_position_code: vehiclePositionData?.code || '',
-          vehicle_position_name: vehiclePositionData?.name || '',
+          warehouse_code: wh?.code || '',
+          warehouse_name: wh?.name || '',
+          vehicle_position_code: vp?.code || '',
+          vehicle_position_name: vp?.name || '',
           vat_type: vatType,
-          transport_code: transportCodeData?.code || '',
-          transport_name: transportCodeData?.name || '',
-          salesperson_code: salespersonData?.code || '',
-          salesperson_name: salespersonData?.name || '',
+          transport_code: tc?.code || '',
+          transport_name: tc?.name || '',
+          salesperson_code: sp?.code || '',
+          salesperson_name: sp?.name || '',
           remark: po.remark || '',
-          // Additional customer info
           vendor_customer_code: po.vendorCustomerCode || '',
           vendor_customer_name: po.vendorCustomerName || '',
         });
