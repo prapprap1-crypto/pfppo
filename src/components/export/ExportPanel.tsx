@@ -402,9 +402,12 @@ export function ExportPanel({ poList }: ExportPanelProps) {
                   checked={selectedPOs.includes(po.id)}
                   onCheckedChange={(checked) => handleSelectPO(po.id, checked as boolean)}
                 />
-                <div className="flex-1">
+                <div 
+                  className="flex-1 cursor-pointer"
+                  onClick={() => navigate(`/verification/${po.id}`)}
+                >
                   <div className="flex items-center gap-3">
-                    <p className="font-semibold text-primary">{po.poNumber}</p>
+                    <p className="font-semibold text-primary hover:underline">{po.poNumber}</p>
                     <Badge 
                       variant={po.status === 'VERIFIED' ? 'default' : 'secondary'}
                       className={po.status === 'VERIFIED' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600 text-white'}
@@ -413,6 +416,7 @@ export function ExportPanel({ poList }: ExportPanelProps) {
                     </Badge>
                     <span className="text-sm text-muted-foreground">|</span>
                     <p className="text-sm">{po.supplierName}</p>
+                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground">{po.branch}</p>
                 </div>
