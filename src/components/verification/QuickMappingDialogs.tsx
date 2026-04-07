@@ -136,11 +136,23 @@ export function QuickCustomerMappingDialog({ customerName, onSuccess }: QuickCus
 
     setLoading(true);
     try {
-      // Check if mapping already exists
+      // Check if mapping already exists by customer name
       const existingMapping = await findCustomerMappingByName(customerName);
       
       if (existingMapping) {
-        // Update existing mapping
+        // Update existing mapping - check vendor code duplicate excluding this mapping
+        const { checkVendorCodeExists } = await import('@/lib/api/database');
+        const isDuplicate = await checkVendorCodeExists(vendorCode, existingMapping.id);
+        if (isDuplicate) {
+          toast({
+            title: 'Vendor Code ซ้ำ',
+            description: `Vendor Code "${vendorCode}" ถูกใช้งานแล้วใน Mapping อื่น`,
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+
         await updateCustomerMapping(existingMapping.id, {
           vendor_customer_code: vendorCode,
           vendor_customer_name: vendorName,
@@ -151,13 +163,26 @@ export function QuickCustomerMappingDialog({ customerName, onSuccess }: QuickCus
           description: `${customerName} → ${vendorName}`,
         });
       } else {
-        // Create new mapping
-        await createCustomerMapping({
-          customer_name: customerName,
-          vendor_customer_code: vendorCode,
-          vendor_customer_name: vendorName,
-          active: true,
-        });
+        // Create new mapping (createCustomerMapping already checks for duplicate vendor code)
+        try {
+          await createCustomerMapping({
+            customer_name: customerName,
+            vendor_customer_code: vendorCode,
+            vendor_customer_name: vendorName,
+            active: true,
+          });
+        } catch (createError: any) {
+          if (createError?.code === 'DUPLICATE_VENDOR_CODE') {
+            toast({
+              title: 'Vendor Code ซ้ำ',
+              description: `Vendor Code "${vendorCode}" ถูกใช้งานแล้วใน Mapping อื่น`,
+              variant: 'destructive',
+            });
+            setLoading(false);
+            return;
+          }
+          throw createError;
+        }
 
         toast({
           title: 'เพิ่ม Mapping ลูกค้าสำเร็จ',

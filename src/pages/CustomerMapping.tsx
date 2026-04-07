@@ -151,8 +151,10 @@ const CustomerMappingPage = () => {
       toast({ title: 'เพิ่ม Mapping ลูกค้าสำเร็จ' });
       loadMappings();
     } catch (error: any) {
-      if (error?.code === '23505') {
-        toast({ title: 'ชื่อลูกค้านี้มีอยู่แล้ว', variant: 'destructive' });
+      if (error?.code === 'DUPLICATE_VENDOR_CODE') {
+        toast({ title: 'Vendor Code นี้มีอยู่แล้ว', description: 'กรุณาใช้ Vendor Code อื่น', variant: 'destructive' });
+      } else if (error?.code === '23505') {
+        toast({ title: 'ข้อมูลนี้มีอยู่แล้ว', variant: 'destructive' });
       } else {
         toast({ title: 'เกิดข้อผิดพลาด', variant: 'destructive' });
       }
