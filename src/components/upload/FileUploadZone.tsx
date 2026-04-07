@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { createPOHeader, createPOItems, autoCreateMappingsForItems, findMappingsForCodes, findCustomerMappingByName } from '@/lib/api/database';
+import { createPOHeader, createPOItems, autoCreateMappingsForItems, findMappingsForCodes } from '@/lib/api/database';
 import { usePOActionLog } from '@/hooks/usePOActionLog';
 import {
   Dialog,
@@ -193,19 +193,13 @@ export function FileUploadZone({
           // Continue even if storage upload fails
         }
 
-        // Find customer mapping if customer_name exists
-        let customerMapping = null;
-        if (extractedData.customer_name) {
-          customerMapping = await findCustomerMappingByName(extractedData.customer_name);
-        }
-
-        // Save to database
+        // Save to database (customer mapping is done manually via Quick Mapping)
         const poHeader = await createPOHeader({
           po_number: extractedData.po_number,
           customer_name: extractedData.customer_name || null,
-          vendor_customer_code: customerMapping?.vendor_customer_code || '',
-          vendor_customer_name: customerMapping?.vendor_customer_name || '',
-          is_customer_mapped: !!customerMapping && !!customerMapping.vendor_customer_code,
+          vendor_customer_code: '',
+          vendor_customer_name: '',
+          is_customer_mapped: false,
           supplier_code: extractedData.supplier_code,
           supplier_name: extractedData.supplier_name,
           branch: extractedData.branch,
