@@ -86,18 +86,22 @@ export function ExportPanel({ poList }: ExportPanelProps) {
     // 2. Collect unique vendor_customer_codes
     const vendorCodes = [...new Set(selectedPOData.map(po => po.vendorCustomerCode).filter(Boolean))] as string[];
 
-    // 3. Batch fetch customer mappings
-    let customerMappingsMap = new Map<string, { id: string; vat_type: number | null; salesperson_id: string | null }>();
+    // 3. Batch fetch customer mappings (handle duplicates by collecting all per vendor code)
+    let customerMappingsMap = new Map<string, Array<{ id: string; vat_type: number | null; salesperson_id: string | null }>>();
     if (vendorCodes.length > 0) {
       const { data: mappings } = await supabase
         .from('customer_mappings')
         .select('id, vendor_customer_code, vat_type, salesperson_id')
         .in('vendor_customer_code', vendorCodes);
-      (mappings || []).forEach(m => customerMappingsMap.set(m.vendor_customer_code, m));
+      (mappings || []).forEach(m => {
+        const existing = customerMappingsMap.get(m.vendor_customer_code) || [];
+        existing.push(m);
+        customerMappingsMap.set(m.vendor_customer_code, existing);
+      });
     }
 
     // 4. Batch fetch salespersons
-    const salespersonIds = [...new Set([...customerMappingsMap.values()].map(m => m.salesperson_id).filter(Boolean))] as string[];
+    const salespersonIds = [...new Set([...customerMappingsMap.values()].flatMap(arr => arr.map(m => m.salesperson_id)).filter(Boolean))] as string[];
     let salespersonMap = new Map<string, { code: string; name: string }>();
     if (salespersonIds.length > 0) {
       const { data: sps } = await supabase.from('salespersons').select('id, code, name').in('id', salespersonIds);
@@ -105,7 +109,7 @@ export function ExportPanel({ poList }: ExportPanelProps) {
     }
 
     // 5. Batch fetch branch mappings
-    const customerMappingIds = [...new Set([...customerMappingsMap.values()].map(m => m.id))];
+    const customerMappingIds = [...new Set([...customerMappingsMap.values()].flatMap(arr => arr.map(m => m.id)))];
     let branchMappingsMap = new Map<string, any>();
     if (customerMappingIds.length > 0) {
       const { data: branchMappings } = await supabase
@@ -138,13 +142,29 @@ export function ExportPanel({ poList }: ExportPanelProps) {
     const vpMap = new Map((vpResult.data || []).map(v => [v.id, v]));
     const tcMap = new Map((tcResult.data || []).map(t => [t.id, t]));
 
-    // 7. Assemble items
+    // 7. Assemble items - try all customer mappings to find branch match
     const allItems: ExportItem[] = [];
     for (const po of selectedPOData) {
-      const cm = po.vendorCustomerCode ? customerMappingsMap.get(po.vendorCustomerCode) : null;
-      const vatType = cm?.vat_type ?? 1;
-      const sp = cm?.salesperson_id ? salespersonMap.get(cm.salesperson_id) : null;
-      const bm = cm ? branchMappingsMap.get(`${cm.id}|${po.branch}`) : null;
+      const cmList = po.vendorCustomerCode ? customerMappingsMap.get(po.vendorCustomerCode) : null;
+      
+      // Find the best matching customer mapping (one that has a branch mapping for this PO's branch)
+      let bestCm: { id: string; vat_type: number | null; salesperson_id: string | null } | null = null;
+      let bm: any = null;
+      if (cmList && cmList.length > 0) {
+        for (const cm of cmList) {
+          const candidate = branchMappingsMap.get(`${cm.id}|${po.branch}`);
+          if (candidate) {
+            bestCm = cm;
+            bm = candidate;
+            break;
+          }
+        }
+        // If no branch match found, use first mapping for vat/salesperson
+        if (!bestCm) bestCm = cmList[0];
+      }
+
+      const vatType = bestCm?.vat_type ?? 1;
+      const sp = bestCm?.salesperson_id ? salespersonMap.get(bestCm.salesperson_id) : null;
 
       let vendorBranchCode = po.vendorBranchCode || '';
       if (!vendorBranchCode && bm) vendorBranchCode = bm.vendor_branch_code || '';
