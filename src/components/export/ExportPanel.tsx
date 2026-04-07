@@ -86,14 +86,18 @@ export function ExportPanel({ poList }: ExportPanelProps) {
     // 2. Collect unique vendor_customer_codes
     const vendorCodes = [...new Set(selectedPOData.map(po => po.vendorCustomerCode).filter(Boolean))] as string[];
 
-    // 3. Batch fetch customer mappings
-    let customerMappingsMap = new Map<string, { id: string; vat_type: number | null; salesperson_id: string | null }>();
+    // 3. Batch fetch customer mappings (handle duplicates by collecting all per vendor code)
+    let customerMappingsMap = new Map<string, Array<{ id: string; vat_type: number | null; salesperson_id: string | null }>>();
     if (vendorCodes.length > 0) {
       const { data: mappings } = await supabase
         .from('customer_mappings')
         .select('id, vendor_customer_code, vat_type, salesperson_id')
         .in('vendor_customer_code', vendorCodes);
-      (mappings || []).forEach(m => customerMappingsMap.set(m.vendor_customer_code, m));
+      (mappings || []).forEach(m => {
+        const existing = customerMappingsMap.get(m.vendor_customer_code) || [];
+        existing.push(m);
+        customerMappingsMap.set(m.vendor_customer_code, existing);
+      });
     }
 
     // 4. Batch fetch salespersons
