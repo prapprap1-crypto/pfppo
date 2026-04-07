@@ -520,6 +520,20 @@ export async function fetchCustomerMappings() {
   return data;
 }
 
+export async function checkVendorCodeExists(vendorCode: string, excludeId?: string): Promise<boolean> {
+  let query = supabase
+    .from('customer_mappings')
+    .select('id')
+    .eq('vendor_customer_code', vendorCode);
+  
+  if (excludeId) {
+    query = query.neq('id', excludeId);
+  }
+  
+  const { data } = await query.limit(1);
+  return (data && data.length > 0) || false;
+}
+
 export async function createCustomerMapping(mapping: {
   customer_name: string;
   vendor_customer_code: string;
@@ -528,6 +542,12 @@ export async function createCustomerMapping(mapping: {
   salesperson_id?: string | null;
   active?: boolean;
 }) {
+  // Check for duplicate vendor code
+  const exists = await checkVendorCodeExists(mapping.vendor_customer_code);
+  if (exists) {
+    throw { code: 'DUPLICATE_VENDOR_CODE', message: `Vendor code "${mapping.vendor_customer_code}" already exists` };
+  }
+
   const { data, error } = await supabase
     .from('customer_mappings')
     .insert(mapping)
