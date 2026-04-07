@@ -6,6 +6,7 @@ import {
   createCustomerMapping, 
   updateCustomerMapping, 
   deleteCustomerMapping,
+  checkVendorCodeExists,
   fetchAllCustomerBranchMappings,
   createCustomerBranchMapping,
   updateCustomerBranchMapping,
@@ -163,6 +164,15 @@ const CustomerMappingPage = () => {
 
   const handleEdit = async (id: string, mapping: Partial<CustomerMapping>) => {
     try {
+      // Check vendor code duplicate (excluding current mapping)
+      if (mapping.vendorCustomerCode) {
+        const isDuplicate = await checkVendorCodeExists(mapping.vendorCustomerCode, id);
+        if (isDuplicate) {
+          toast({ title: 'Vendor Code นี้มีอยู่แล้ว', description: 'กรุณาใช้ Vendor Code อื่น', variant: 'destructive' });
+          return;
+        }
+      }
+
       await updateCustomerMapping(id, {
         customer_name: mapping.customerName,
         vendor_customer_code: mapping.vendorCustomerCode,
