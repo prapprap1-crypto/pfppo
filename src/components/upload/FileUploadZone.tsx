@@ -193,13 +193,31 @@ export function FileUploadZone({
           // Continue even if storage upload fails
         }
 
-        // Save to database (customer mapping is done manually via Quick Mapping)
+        // Auto-match customer mapping by name
+        let vendorCustomerCode = '';
+        let vendorCustomerName = '';
+        let isCustomerMapped = false;
+
+        if (extractedData.customer_name) {
+          try {
+            const customerMapping = await findCustomerMappingByName(extractedData.customer_name);
+            if (customerMapping && customerMapping.vendor_customer_code) {
+              vendorCustomerCode = customerMapping.vendor_customer_code;
+              vendorCustomerName = customerMapping.vendor_customer_name;
+              isCustomerMapped = true;
+              console.log(`Auto-matched customer: ${extractedData.customer_name} → ${vendorCustomerCode}`);
+            }
+          } catch (e) {
+            console.error('Error auto-matching customer mapping:', e);
+          }
+        }
+
         const poHeader = await createPOHeader({
           po_number: extractedData.po_number,
           customer_name: extractedData.customer_name || null,
-          vendor_customer_code: '',
-          vendor_customer_name: '',
-          is_customer_mapped: false,
+          vendor_customer_code: vendorCustomerCode,
+          vendor_customer_name: vendorCustomerName,
+          is_customer_mapped: isCustomerMapped,
           supplier_code: extractedData.supplier_code,
           supplier_name: extractedData.supplier_name,
           branch: extractedData.branch,
