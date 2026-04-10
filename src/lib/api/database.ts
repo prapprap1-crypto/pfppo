@@ -945,30 +945,36 @@ export async function fetchExportHistory() {
 
 // Dashboard Stats
 export async function fetchDashboardStats() {
-  const { data: poHeaders, error } = await supabase
-    .from('po_headers')
-    .select('status');
+  // Use exact count to avoid the 1000-row limit
+  const statuses = ['NEW', 'IMPORTED', 'NEED_REVIEW', 'VERIFIED', 'EXPORTED', 'ERROR'];
   
-  if (error) throw error;
+  const [totalResult, ...statusResults] = await Promise.all([
+    supabase.from('po_headers').select('*', { count: 'exact', head: true }),
+    ...statuses.map(s => 
+      supabase.from('po_headers').select('*', { count: 'exact', head: true }).eq('status', s)
+    ),
+  ]);
+
+  if (totalResult.error) throw totalResult.error;
 
   const stats = {
-    totalPOs: poHeaders?.length || 0,
-    newPOs: poHeaders?.filter(p => p.status === 'NEW').length || 0,
-    importedPOs: poHeaders?.filter(p => p.status === 'IMPORTED').length || 0,
-    needReviewPOs: poHeaders?.filter(p => p.status === 'NEED_REVIEW').length || 0,
-    verifiedPOs: poHeaders?.filter(p => p.status === 'VERIFIED').length || 0,
-    exportedPOs: poHeaders?.filter(p => p.status === 'EXPORTED').length || 0,
-    errorPOs: poHeaders?.filter(p => p.status === 'ERROR').length || 0,
+    totalPOs: totalResult.count || 0,
+    newPOs: statusResults[0].count || 0,
+    importedPOs: statusResults[1].count || 0,
+    needReviewPOs: statusResults[2].count || 0,
+    verifiedPOs: statusResults[3].count || 0,
+    exportedPOs: statusResults[4].count || 0,
+    errorPOs: statusResults[5].count || 0,
   };
 
   // Get unmapped products count
-  const { data: unmappedItems, error: itemsError } = await supabase
+  const { count: unmappedCount, error: itemsError } = await supabase
     .from('po_items')
-    .select('id')
+    .select('*', { count: 'exact', head: true })
     .eq('is_mapped', false);
   
   if (!itemsError) {
-    (stats as any).unmappedProducts = unmappedItems?.length || 0;
+    (stats as any).unmappedProducts = unmappedCount || 0;
   }
 
   return stats;
