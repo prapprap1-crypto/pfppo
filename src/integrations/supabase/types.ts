@@ -162,6 +162,104 @@ export type Database = {
           },
         ]
       }
+      email_import_settings: {
+        Row: {
+          created_at: string
+          folder: string
+          id: string
+          is_enabled: boolean
+          last_synced_at: string | null
+          sender_filter: string | null
+          subject_filter: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          folder?: string
+          id?: string
+          is_enabled?: boolean
+          last_synced_at?: string | null
+          sender_filter?: string | null
+          subject_filter?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          folder?: string
+          id?: string
+          is_enabled?: boolean
+          last_synced_at?: string | null
+          sender_filter?: string | null
+          subject_filter?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_imports: {
+        Row: {
+          attachment_id: string
+          created_at: string
+          error_message: string | null
+          file_name: string
+          file_path: string | null
+          file_size: number | null
+          id: string
+          message_id: string
+          po_id: string | null
+          processed_at: string | null
+          received_at: string | null
+          sender_email: string | null
+          sender_name: string | null
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          attachment_id: string
+          created_at?: string
+          error_message?: string | null
+          file_name: string
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          message_id: string
+          po_id?: string | null
+          processed_at?: string | null
+          received_at?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attachment_id?: string
+          created_at?: string
+          error_message?: string | null
+          file_name?: string
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          message_id?: string
+          po_id?: string | null
+          processed_at?: string | null
+          received_at?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_imports_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "po_headers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       export_history: {
         Row: {
           exported_at: string

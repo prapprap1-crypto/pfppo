@@ -1,0 +1,194 @@
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const GATEWAY_URL = 'https://connector-gateway.lovable.dev/microsoft_outlook';
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const OUTLOOK_KEY = Deno.env.get('MICROSOFT_OUTLOOK_API_KEY');
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+    const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    if (!LOVABLE_API_KEY || !OUTLOOK_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'ยังไม่ได้เชื่อมต่อบัญชี Microsoft Outlook' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // --- Auth ---
+    const authHeader = req.headers.get('Authorization') ?? '';
+    if (!authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    const body = await req.json().catch(() => ({}));
+    const maxMessages = Math.min(Number(body?.maxMessages) || 25, 50);
+
+    // --- Settings ---
+    const { data: settings } = await admin
+      .from('email_import_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
+
+    const folder: string = (body?.folder || settings?.folder || 'inbox').trim();
+    const senderFilter: string = (body?.senderFilter ?? settings?.sender_filter ?? '').trim();
+    const subjectFilter: string = (body?.subjectFilter ?? settings?.subject_filter ?? '').trim();
+
+    const gw = (path: string, init: RequestInit = {}) =>
+      fetch(`${GATEWAY_URL}${path}`, {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          'X-Connection-Api-Key': OUTLOOK_KEY,
+          'Content-Type': 'application/json',
+          ...(init.headers || {}),
+        },
+      });
+
+    // --- Resolve folder path ---
+    const wellKnown = ['inbox', 'drafts', 'sentitems', 'deleteditems', 'junkemail', 'archive'];
+    let folderSegment = `/me/mailFolders/${encodeURIComponent(folder || 'inbox')}`;
+    if (folder && !wellKnown.includes(folder.toLowerCase())) {
+      // Try to find a child folder by display name under inbox, then at root
+      const lookup = async (base: string) => {
+        const r = await gw(`${base}?$top=100&$select=id,displayName`);
+        if (!r.ok) return null;
+        const j = await r.json();
+        return (j.value || []).find(
+          (f: { displayName: string }) => f.displayName?.toLowerCase() === folder.toLowerCase(),
+        );
+      };
+      const found =
+        (await lookup('/me/mailFolders/inbox/childFolders')) || (await lookup('/me/mailFolders'));
+      if (found) folderSegment = `/me/mailFolders/${found.id}`;
+      else folderSegment = '/me/mailFolders/inbox';
+    }
+
+    const filters = ['hasAttachments eq true'];
+    if (senderFilter) {
+      filters.push(`contains(from/emailAddress/address,'${senderFilter.replace(/'/g, "''")}')`);
+    }
+    if (subjectFilter) {
+      filters.push(`contains(subject,'${subjectFilter.replace(/'/g, "''")}')`);
+    }
+
+    const query =
+      `${folderSegment}/messages?$top=${maxMessages}` +
+      `&$select=id,subject,from,receivedDateTime,hasAttachments` +
+      `&$orderby=receivedDateTime desc&$filter=${encodeURIComponent(filters.join(' and '))}`;
+
+    const listRes = await gw(query);
+    if (!listRes.ok) {
+      const errorBody = await listRes.text();
+      console.error(`Outlook list failed [${listRes.status}]: ${errorBody}`);
+      return new Response(
+        JSON.stringify({ error: 'ดึงอีเมลไม่สำเร็จ', status: listRes.status, details: errorBody }),
+        { status: listRes.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+    const listJson = await listRes.json();
+    const messages: Array<Record<string, unknown>> = listJson.value || [];
+
+    let newCount = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (const msg of messages) {
+      const messageId = msg.id as string;
+      const attRes = await gw(
+        `/me/messages/${messageId}/attachments?$select=id,name,contentType,size,contentBytes`,
+      );
+      if (!attRes.ok) {
+        errors.push(`attachments ${messageId}: ${attRes.status}`);
+        continue;
+      }
+      const attJson = await attRes.json();
+      const pdfs = (attJson.value || []).filter(
+        (a: { name?: string; contentType?: string }) =>
+          a.name?.toLowerCase().endsWith('.pdf') || a.contentType === 'application/pdf',
+      );
+
+      for (const att of pdfs) {
+        const { data: existing } = await admin
+          .from('email_imports')
+          .select('id')
+          .eq('message_id', messageId)
+          .eq('attachment_id', att.id)
+          .maybeSingle();
+        if (existing) { skipped++; continue; }
+
+        if (!att.contentBytes) { errors.push(`no content: ${att.name}`); continue; }
+
+        const bytes = Uint8Array.from(atob(att.contentBytes), (c) => c.charCodeAt(0));
+        const filePath = `email/${messageId}_${att.id}.pdf`.replace(/[^\w\-./]/g, '_');
+
+        const { error: uploadError } = await admin.storage
+          .from('po-files')
+          .upload(filePath, bytes, { contentType: 'application/pdf', upsert: true });
+        if (uploadError) {
+          errors.push(`upload ${att.name}: ${uploadError.message}`);
+          continue;
+        }
+
+        const from = (msg.from as { emailAddress?: { address?: string; name?: string } })?.emailAddress;
+        const { error: insertError } = await admin.from('email_imports').insert({
+          message_id: messageId,
+          attachment_id: att.id,
+          subject: (msg.subject as string) ?? null,
+          sender_email: from?.address ?? null,
+          sender_name: from?.name ?? null,
+          received_at: (msg.receivedDateTime as string) ?? null,
+          file_name: att.name,
+          file_size: att.size ?? null,
+          file_path: filePath,
+          status: 'FETCHED',
+        });
+        if (insertError) errors.push(`insert ${att.name}: ${insertError.message}`);
+        else newCount++;
+      }
+    }
+
+    if (settings?.id) {
+      await admin
+        .from('email_import_settings')
+        .update({ last_synced_at: new Date().toISOString() })
+        .eq('id', settings.id);
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, scanned: messages.length, newCount, skipped, errors }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  } catch (error) {
+    console.error('fetch-outlook-po error:', error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unexpected error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+});
