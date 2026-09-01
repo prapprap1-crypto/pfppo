@@ -384,19 +384,26 @@ export default function EmailImport() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     ยังไม่มีไฟล์จากอีเมล — กด "ดึงเมลใหม่" เพื่อเริ่ม
                   </TableCell>
                 </TableRow>
               ) : (
                 rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow key={row.id} data-state={selectedIds.includes(row.id) ? 'selected' : undefined}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(row.id)}
+                        onCheckedChange={(v) => toggleOne(row.id, !!v)}
+                        aria-label="เลือกรายการ"
+                      />
+                    </TableCell>
                     <TableCell className="whitespace-nowrap">{formatDateTime(row.received_at)}</TableCell>
                     <TableCell className="max-w-48 truncate">{row.sender_email || '-'}</TableCell>
                     <TableCell className="max-w-64 truncate">{row.subject || '-'}</TableCell>
@@ -437,6 +444,24 @@ export default function EmailImport() {
             </TableBody>
           </Table>
         </Card>
+
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+              <AlertDialogDescription>
+                ต้องการลบรายการที่เลือก {selectedIds.length} รายการใช่หรือไม่? การลบไม่สามารถย้อนกลับได้
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>ยกเลิก</AlertDialogCancel>
+              <AlertDialogAction onClick={(e) => { e.preventDefault(); deleteSelected(); }} disabled={deleting}>
+                {deleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                ลบ
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );
