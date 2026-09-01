@@ -139,11 +139,12 @@ Deno.serve(async (req) => {
 
     for (const msg of messages) {
       const messageId = msg.id as string;
-      const attRes = await gw(
-        `/me/messages/${messageId}/attachments?$select=id,name,contentType,size,contentBytes`,
-      );
+      // NOTE: $select=contentBytes is rejected by Graph (400) — fetch full attachments.
+      const attRes = await gw(`/me/messages/${messageId}/attachments`);
       if (!attRes.ok) {
-        errors.push(`attachments ${messageId}: ${attRes.status}`);
+        const attErr = await attRes.text();
+        console.error(`attachments ${messageId} [${attRes.status}]: ${attErr}`);
+        errors.push(`attachments ${messageId}: ${attRes.status} ${attErr.slice(0, 200)}`);
         continue;
       }
       const attJson = await attRes.json();
@@ -161,9 +162,21 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (existing) { skipped++; continue; }
 
-        if (!att.contentBytes) { errors.push(`no content: ${att.name}`); continue; }
+        let base64: string | undefined = att.contentBytes;
+        if (!base64) {
+          // Large attachments (>3MB) omit contentBytes — fetch raw bytes
+          const rawRes = await gw(`/me/messages/${messageId}/attachments/${att.id}/$value`);
+          if (!rawRes.ok) {
+            errors.push(`no content: ${att.name} (${rawRes.status})`);
+            continue;
+          }
+          const buf = new Uint8Array(await rawRes.arrayBuffer());
+          let bin = '';
+          for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+          base64 = btoa(bin);
+        }
 
-        const bytes = Uint8Array.from(atob(att.contentBytes), (c) => c.charCodeAt(0));
+        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
         const filePath = `email/${messageId}_${att.id}.pdf`.replace(/[^\w\-./]/g, '_');
 
         const { error: uploadError } = await admin.storage
