@@ -139,11 +139,12 @@ Deno.serve(async (req) => {
 
     for (const msg of messages) {
       const messageId = msg.id as string;
-      const attRes = await gw(
-        `/me/messages/${messageId}/attachments?$select=id,name,contentType,size,contentBytes`,
-      );
+      // NOTE: $select=contentBytes is rejected by Graph (400) — fetch full attachments.
+      const attRes = await gw(`/me/messages/${messageId}/attachments`);
       if (!attRes.ok) {
-        errors.push(`attachments ${messageId}: ${attRes.status}`);
+        const attErr = await attRes.text();
+        console.error(`attachments ${messageId} [${attRes.status}]: ${attErr}`);
+        errors.push(`attachments ${messageId}: ${attRes.status} ${attErr.slice(0, 200)}`);
         continue;
       }
       const attJson = await attRes.json();
