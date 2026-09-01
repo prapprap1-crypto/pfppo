@@ -354,10 +354,25 @@ export default function EmailImport() {
                 ผิดพลาด {rows.filter((r) => r.status === 'ERROR').length}
               </Badge>
             )}
+            {selectedIds.length > 0 && (
+              <div className="ml-auto flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">เลือก {selectedIds.length} รายการ</span>
+                <Button size="sm" variant="destructive" onClick={() => setConfirmOpen(true)}>
+                  <Trash2 className="w-4 h-4 mr-1" /> ลบที่เลือก
+                </Button>
+              </div>
+            )}
           </div>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={rows.length > 0 && selectedIds.length === rows.length}
+                    onCheckedChange={(v) => toggleAll(!!v)}
+                    aria-label="เลือกทั้งหมด"
+                  />
+                </TableHead>
                 <TableHead>วันที่รับ</TableHead>
                 <TableHead>ผู้ส่ง</TableHead>
                 <TableHead>หัวข้อ</TableHead>
