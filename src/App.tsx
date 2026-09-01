@@ -24,6 +24,7 @@ import TransportCodeSettings from "./pages/TransportCodeSettings";
 import SalespersonSettings from "./pages/SalespersonSettings";
 import POHistoryReport from "./pages/POHistoryReport";
 import UserGuide from "./pages/UserGuide";
+import EmailImportSettings from "./pages/EmailImportSettings";
 import EmailImport from "./pages/EmailImport";
 
 const queryClient = new QueryClient();
@@ -66,6 +67,7 @@ function AppRoutes() {
       <Route path="/activity-log" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/settings/email-import" element={<ProtectedRoute><EmailImportSettings /></ProtectedRoute>} />
       <Route path="/settings/warehouses" element={<ProtectedRoute><WarehouseSettings /></ProtectedRoute>} />
       <Route path="/settings/vehicle-positions" element={<ProtectedRoute><VehiclePositionSettings /></ProtectedRoute>} />
       <Route path="/settings/transport-codes" element={<ProtectedRoute><TransportCodeSettings /></ProtectedRoute>} />

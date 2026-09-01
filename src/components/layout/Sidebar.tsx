@@ -46,6 +46,7 @@ const settingsNavItems = [
   { path: '/mapping', label: 'Mapping สินค้า', icon: Layers },
   { path: '/customer-mapping', label: 'Mapping ลูกค้า', icon: Building2 },
   { path: '/mapping-dashboard', label: 'สรุป Mapping', icon: PieChart },
+  { path: '/settings/email-import', label: 'นำเข้าจากอีเมล', icon: Mail },
   { path: '/settings/warehouses', label: 'คลังสินค้า', icon: Warehouse },
   { path: '/settings/vehicle-positions', label: 'ตำแหน่งจัดรถ', icon: MapPinned },
   { path: '/settings/transport-codes', label: 'รหัสขนส่ง', icon: Truck },
