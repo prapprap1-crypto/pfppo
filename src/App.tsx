@@ -24,6 +24,7 @@ import TransportCodeSettings from "./pages/TransportCodeSettings";
 import SalespersonSettings from "./pages/SalespersonSettings";
 import POHistoryReport from "./pages/POHistoryReport";
 import UserGuide from "./pages/UserGuide";
+import EmailImport from "./pages/EmailImport";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ function AppRoutes() {
       <Route path="/auth" element={<Auth />} />
       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/po-list" element={<ProtectedRoute><POList /></ProtectedRoute>} />
+      <Route path="/email-import" element={<ProtectedRoute><EmailImport /></ProtectedRoute>} />
       <Route path="/mapping" element={<ProtectedRoute><Mapping /></ProtectedRoute>} />
       <Route path="/customer-mapping" element={<ProtectedRoute><CustomerMapping /></ProtectedRoute>} />
       <Route path="/mapping-dashboard" element={<ProtectedRoute><MappingDashboard /></ProtectedRoute>} />

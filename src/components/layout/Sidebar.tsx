@@ -22,7 +22,8 @@ import {
   MapPinned,
   Truck,
   UserCheck,
-  BookOpen
+  BookOpen,
+  Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,6 +37,7 @@ import {
 const mainNavItems = [
   { path: '/', label: 'แดชบอร์ด', icon: LayoutDashboard },
   { path: '/po-list', label: 'รายการ PO', icon: FileText },
+  { path: '/email-import', label: 'นำเข้าจากอีเมล', icon: Mail },
   { path: '/verification', label: 'ตรวจสอบเอกสาร', icon: FileCheck },
   { path: '/export', label: 'ส่งออก Excel', icon: Download },
 ];
