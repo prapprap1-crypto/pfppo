@@ -162,9 +162,21 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (existing) { skipped++; continue; }
 
-        if (!att.contentBytes) { errors.push(`no content: ${att.name}`); continue; }
+        let base64: string | undefined = att.contentBytes;
+        if (!base64) {
+          // Large attachments (>3MB) omit contentBytes — fetch raw bytes
+          const rawRes = await gw(`/me/messages/${messageId}/attachments/${att.id}/$value`);
+          if (!rawRes.ok) {
+            errors.push(`no content: ${att.name} (${rawRes.status})`);
+            continue;
+          }
+          const buf = new Uint8Array(await rawRes.arrayBuffer());
+          let bin = '';
+          for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+          base64 = btoa(bin);
+        }
 
-        const bytes = Uint8Array.from(atob(att.contentBytes), (c) => c.charCodeAt(0));
+        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
         const filePath = `email/${messageId}_${att.id}.pdf`.replace(/[^\w\-./]/g, '_');
 
         const { error: uploadError } = await admin.storage
