@@ -106,9 +106,18 @@ Deno.serve(async (req) => {
     if (!listRes.ok) {
       const errorBody = await listRes.text();
       console.error(`Outlook list failed [${listRes.status}]: ${errorBody}`);
+      let message = 'ดึงอีเมลไม่สำเร็จ';
+      if (errorBody.includes('MailboxNotEnabledForRESTAPI')) {
+        message =
+          'บัญชีที่เชื่อมต่อไม่มีกล่องเมล Microsoft 365 (Exchange Online) — อาจเป็นบัญชี Outlook.com ส่วนตัว, บัญชีที่ยังไม่มี license Exchange, หรือเมลอยู่บนเซิร์ฟเวอร์องค์กร (on-premise). กรุณาเชื่อมต่อใหม่ด้วยบัญชีองค์กร M365 ที่มีกล่องเมลบนคลาวด์';
+      } else if (errorBody.includes('ErrorItemNotFound') || errorBody.includes('ResourceNotFound')) {
+        message = 'ไม่พบโฟลเดอร์เมลที่ระบุ กรุณาตรวจสอบชื่อโฟลเดอร์ในหน้าตั้งค่า';
+      } else if (listRes.status === 401 || listRes.status === 403) {
+        message = 'สิทธิ์การเข้าถึงเมลหมดอายุหรือไม่เพียงพอ กรุณาเชื่อมต่อบัญชี Microsoft ใหม่อีกครั้ง';
+      }
       return new Response(
-        JSON.stringify({ error: 'ดึงอีเมลไม่สำเร็จ', status: listRes.status, details: errorBody }),
-        { status: listRes.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        JSON.stringify({ error: message, status: listRes.status, details: errorBody }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
     const listJson = await listRes.json();
