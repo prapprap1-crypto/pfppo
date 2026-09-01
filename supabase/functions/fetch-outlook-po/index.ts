@@ -89,18 +89,12 @@ Deno.serve(async (req) => {
       else folderSegment = '/me/mailFolders/inbox';
     }
 
-    const filters = ['hasAttachments eq true'];
-    if (senderFilter) {
-      filters.push(`contains(from/emailAddress/address,'${senderFilter.replace(/'/g, "''")}')`);
-    }
-    if (subjectFilter) {
-      filters.push(`contains(subject,'${subjectFilter.replace(/'/g, "''")}')`);
-    }
-
+    // Graph rejects complex $filter + $orderby combos (InefficientFilter),
+    // so fetch newest messages and filter client-side.
     const query =
-      `${folderSegment}/messages?$top=${maxMessages}` +
+      `${folderSegment}/messages?$top=${Math.min(maxMessages * 4, 100)}` +
       `&$select=id,subject,from,receivedDateTime,hasAttachments` +
-      `&$orderby=receivedDateTime desc&$filter=${encodeURIComponent(filters.join(' and '))}`;
+      `&$orderby=receivedDateTime desc`;
 
     const listRes = await gw(query);
     if (!listRes.ok) {
@@ -112,6 +106,8 @@ Deno.serve(async (req) => {
           'บัญชีที่เชื่อมต่อไม่มีกล่องเมล Microsoft 365 (Exchange Online) — อาจเป็นบัญชี Outlook.com ส่วนตัว, บัญชีที่ยังไม่มี license Exchange, หรือเมลอยู่บนเซิร์ฟเวอร์องค์กร (on-premise). กรุณาเชื่อมต่อใหม่ด้วยบัญชีองค์กร M365 ที่มีกล่องเมลบนคลาวด์';
       } else if (errorBody.includes('ErrorItemNotFound') || errorBody.includes('ResourceNotFound')) {
         message = 'ไม่พบโฟลเดอร์เมลที่ระบุ กรุณาตรวจสอบชื่อโฟลเดอร์ในหน้าตั้งค่า';
+      } else if (errorBody.includes('InefficientFilter')) {
+        message = 'เงื่อนไขการกรองซับซ้อนเกินไปสำหรับ Outlook กรุณาลดเงื่อนไขการกรองลง';
       } else if (listRes.status === 401 || listRes.status === 403) {
         message = 'สิทธิ์การเข้าถึงเมลหมดอายุหรือไม่เพียงพอ กรุณาเชื่อมต่อบัญชี Microsoft ใหม่อีกครั้ง';
       }
@@ -121,7 +117,21 @@ Deno.serve(async (req) => {
       );
     }
     const listJson = await listRes.json();
-    const messages: Array<Record<string, unknown>> = listJson.value || [];
+    const senderLc = senderFilter.toLowerCase();
+    const subjectLc = subjectFilter.toLowerCase();
+    const messages: Array<Record<string, unknown>> = (listJson.value || [])
+      .filter((m: Record<string, unknown>) => {
+        if (!m.hasAttachments) return false;
+        const addr = (
+          (m.from as { emailAddress?: { address?: string } })?.emailAddress?.address ?? ''
+        ).toLowerCase();
+        const subj = ((m.subject as string) ?? '').toLowerCase();
+        if (senderLc && !addr.includes(senderLc)) return false;
+        if (subjectLc && !subj.includes(subjectLc)) return false;
+        return true;
+      })
+      .slice(0, maxMessages);
+
 
     let newCount = 0;
     let skipped = 0;
