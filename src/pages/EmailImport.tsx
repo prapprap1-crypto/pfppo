@@ -312,6 +312,21 @@ export default function EmailImport() {
         )}
 
         <Card>
+          <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b">
+            <span className="text-sm font-medium">รายการไฟล์จากอีเมล</span>
+            <Badge variant="secondary">ทั้งหมด {rows.length} รายการ</Badge>
+            <Badge variant="outline">
+              รอวิเคราะห์ {rows.filter((r) => r.status !== 'PROCESSED' && r.status !== 'ERROR').length}
+            </Badge>
+            <Badge className="bg-green-500/15 text-green-600 hover:bg-green-500/15">
+              วิเคราะห์แล้ว {rows.filter((r) => r.status === 'PROCESSED').length}
+            </Badge>
+            {rows.some((r) => r.status === 'ERROR') && (
+              <Badge variant="destructive">
+                ผิดพลาด {rows.filter((r) => r.status === 'ERROR').length}
+              </Badge>
+            )}
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
