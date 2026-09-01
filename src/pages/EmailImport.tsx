@@ -68,6 +68,9 @@ export default function EmailImport() {
   const [fetching, setFetching] = useState(false);
   const [saving, setSaving] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const loadAll = async () => {
     setLoading(true);
@@ -77,7 +80,27 @@ export default function EmailImport() {
     ]);
     setSettings(s as Settings | null);
     setRows((list || []) as EmailImportRow[]);
+    setSelectedIds([]);
     setLoading(false);
+  };
+
+  const toggleOne = (id: string, checked: boolean) =>
+    setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
+
+  const toggleAll = (checked: boolean) =>
+    setSelectedIds(checked ? rows.map((r) => r.id) : []);
+
+  const deleteSelected = async () => {
+    setDeleting(true);
+    const { error } = await supabase.from('email_imports').delete().in('id', selectedIds);
+    setDeleting(false);
+    setConfirmOpen(false);
+    if (error) {
+      toast({ title: 'ลบไม่สำเร็จ', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: `ลบ ${selectedIds.length} รายการแล้ว` });
+    await loadAll();
   };
 
   useEffect(() => { loadAll(); }, []);
