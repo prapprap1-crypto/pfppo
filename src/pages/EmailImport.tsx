@@ -12,7 +12,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Loader2, Mail, RefreshCw, Play, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
+import { Loader2, Mail, RefreshCw, Play, CheckCircle, AlertCircle, Trash2, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -58,15 +58,20 @@ export default function EmailImport() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
   const loadAll = async () => {
     setLoading(true);
-    const { data: list } = await supabase
-      .from('email_imports')
-      .select('*')
-      .order('received_at', { ascending: false })
-      .limit(200);
+    const [{ data: list }, { data: settings }] = await Promise.all([
+      supabase
+        .from('email_imports')
+        .select('*')
+        .order('received_at', { ascending: false })
+        .limit(200),
+      supabase.from('email_import_settings').select('last_synced_at').limit(1).maybeSingle(),
+    ]);
     setRows((list || []) as EmailImportRow[]);
+    setLastSyncedAt(settings?.last_synced_at ?? null);
     setSelectedIds([]);
     setLoading(false);
   };
@@ -246,6 +251,11 @@ export default function EmailImport() {
             <p className="text-sm text-muted-foreground mt-1">
               ดึงไฟล์ PO (PDF) จากกล่องเมลอัตโนมัติ แล้ววิเคราะห์เข้าสู่ระบบโดยไม่ต้องอัปโหลดเอง
             </p>
+            <div className="flex items-center gap-2 mt-2">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">ดึงเมลล่าสุด:</span>
+              <Badge variant="secondary">{formatDateTime(lastSyncedAt)}</Badge>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={fetchEmails} disabled={fetching}>
