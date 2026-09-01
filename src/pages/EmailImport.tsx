@@ -292,53 +292,6 @@ export default function EmailImport() {
           </div>
         </div>
 
-        {settings && (
-          <Card className="p-4 space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label>โฟลเดอร์เมล</Label>
-                <Input
-                  value={settings.folder}
-                  placeholder="inbox หรือชื่อโฟลเดอร์ เช่น PO"
-                  onChange={(e) => setSettings({ ...settings, folder: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>กรองผู้ส่ง (อีเมล/โดเมน)</Label>
-                <Input
-                  value={settings.sender_filter ?? ''}
-                  placeholder="เช่น @bnn.co.th"
-                  onChange={(e) => setSettings({ ...settings, sender_filter: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>กรองหัวข้อเมล</Label>
-                <Input
-                  value={settings.subject_filter ?? ''}
-                  placeholder="เช่น ใบสั่งซื้อ"
-                  onChange={(e) => setSettings({ ...settings, subject_filter: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Switch
-                  checked={settings.is_enabled}
-                  onCheckedChange={(v) => setSettings({ ...settings, is_enabled: v })}
-                />
-                <span className="text-sm">เปิดใช้งานการนำเข้าจากอีเมล</span>
-                <span className="text-xs text-muted-foreground">
-                  ซิงก์ล่าสุด: {formatDateTime(settings.last_synced_at)}
-                </span>
-              </div>
-              <Button variant="secondary" onClick={saveSettings} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                บันทึกการตั้งค่า
-              </Button>
-            </div>
-          </Card>
-        )}
-
         <Card>
           <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b">
             <span className="text-sm font-medium">รายการไฟล์จากอีเมล</span>
