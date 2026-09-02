@@ -78,7 +78,9 @@ const STATUS_CLASSES: Record<POHeader['status'], string> = {
 export function VerificationView({ po, items, onVerify, onReject }: VerificationViewProps) {
   const { toast } = useToast();
   const { logAction } = usePOActionLog();
-  const { isModerator } = useUserRole();
+  const { isModerator, isAdmin } = useUserRole();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(true);
