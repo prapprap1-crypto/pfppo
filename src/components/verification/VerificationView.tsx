@@ -727,6 +727,18 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {(localPO.vendorBranchName || localPO.branch) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyBranchToRemark}
+                  className="gap-2"
+                  title="คัดลอกชื่อสาขาไปยังหมายเหตุ"
+                >
+                  <Copy className="w-4 h-4" />
+                  คัดลอกชื่อสาขา
+                </Button>
+              )}
               {!localPO.isBranchMapped && localPO.branch && localPO.isCustomerMapped && (
                 <QuickBranchMappingDialog 
                   customerName={localPO.customerName || ''} 
