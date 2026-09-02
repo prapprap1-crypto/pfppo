@@ -353,6 +353,52 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
     onReject?.();
   };
 
+  const handleDeletePO = async () => {
+    try {
+      setIsDeleting(true);
+      await supabase.from('po_items').delete().eq('po_id', po.id);
+      const { error } = await supabase.from('po_headers').delete().eq('id', po.id);
+      if (error) throw error;
+
+      toast({
+        title: "ลบเอกสารสำเร็จ",
+        description: `ลบเอกสาร ${po.poNumber} เรียบร้อยแล้ว`,
+      });
+      setDeleteOpen(false);
+      onReject?.();
+    } catch (error) {
+      console.error('Error deleting PO:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถลบเอกสารได้",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCopyBranchToRemark = async () => {
+    const branchText = localPO.vendorBranchName || localPO.branch || '';
+    if (!branchText) return;
+    try {
+      await navigator.clipboard.writeText(branchText);
+    } catch (e) {
+      console.error('Clipboard error:', e);
+    }
+    setRemark(branchText);
+    try {
+      await updatePOHeader(po.id, { remark: branchText });
+    } catch (e) {
+      console.error('Error saving remark:', e);
+    }
+    toast({
+      title: "คัดลอกชื่อสาขาแล้ว",
+      description: `ส่งไปยังหมายเหตุ: ${branchText}`,
+    });
+  };
+
+
   const handleRefreshMapping = async () => {
     try {
       setIsRefreshing(true);
