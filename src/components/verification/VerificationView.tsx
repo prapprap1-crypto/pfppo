@@ -1091,6 +1091,27 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
           ยืนยันเอกสาร
         </Button>
       </div>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการลบเอกสาร</AlertDialogTitle>
+            <AlertDialogDescription>
+              ต้องการลบเอกสาร {po.poNumber} และรายการสินค้าทั้งหมดใช่หรือไม่? การลบไม่สามารถย้อนกลับได้
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDeletePO(); }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'กำลังลบ...' : 'ลบเอกสาร'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
