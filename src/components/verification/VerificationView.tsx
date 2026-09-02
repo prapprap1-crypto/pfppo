@@ -598,6 +598,17 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteOpen(true)}
+                className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                <Trash2 className="w-4 h-4" />
+                ลบเอกสาร
+              </Button>
+            )}
             <EditHistoryDialog poId={po.id} />
             <span className={cn('status-badge px-3 py-1 rounded-full text-sm font-medium border', STATUS_CLASSES[localPO.status])}>
               {STATUS_LABELS[localPO.status]}
