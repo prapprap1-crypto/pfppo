@@ -5,16 +5,6 @@ import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { 
   AlertTriangle, 
   CheckCircle2, 
@@ -28,9 +18,7 @@ import {
   MessageSquare,
   Save,
   X,
-  Loader2,
-  Trash2,
-  Copy
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -78,9 +66,7 @@ const STATUS_CLASSES: Record<POHeader['status'], string> = {
 export function VerificationView({ po, items, onVerify, onReject }: VerificationViewProps) {
   const { toast } = useToast();
   const { logAction } = usePOActionLog();
-  const { isModerator, isAdmin } = useUserRole();
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const { isModerator } = useUserRole();
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(true);
@@ -353,52 +339,6 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
     onReject?.();
   };
 
-  const handleDeletePO = async () => {
-    try {
-      setIsDeleting(true);
-      await supabase.from('po_items').delete().eq('po_id', po.id);
-      const { error } = await supabase.from('po_headers').delete().eq('id', po.id);
-      if (error) throw error;
-
-      toast({
-        title: "ลบเอกสารสำเร็จ",
-        description: `ลบเอกสาร ${po.poNumber} เรียบร้อยแล้ว`,
-      });
-      setDeleteOpen(false);
-      onReject?.();
-    } catch (error) {
-      console.error('Error deleting PO:', error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถลบเอกสารได้",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleCopyBranchToRemark = async () => {
-    const branchText = localPO.vendorBranchName || localPO.branch || '';
-    if (!branchText) return;
-    try {
-      await navigator.clipboard.writeText(branchText);
-    } catch (e) {
-      console.error('Clipboard error:', e);
-    }
-    setRemark(branchText);
-    try {
-      await updatePOHeader(po.id, { remark: branchText });
-    } catch (e) {
-      console.error('Error saving remark:', e);
-    }
-    toast({
-      title: "คัดลอกชื่อสาขาแล้ว",
-      description: `ส่งไปยังหมายเหตุ: ${branchText}`,
-    });
-  };
-
-
   const handleRefreshMapping = async () => {
     try {
       setIsRefreshing(true);
@@ -598,17 +538,6 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteOpen(true)}
-                className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
-              >
-                <Trash2 className="w-4 h-4" />
-                ลบเอกสาร
-              </Button>
-            )}
             <EditHistoryDialog poId={po.id} />
             <span className={cn('status-badge px-3 py-1 rounded-full text-sm font-medium border', STATUS_CLASSES[localPO.status])}>
               {STATUS_LABELS[localPO.status]}
@@ -738,18 +667,6 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {(localPO.vendorBranchName || localPO.branch) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyBranchToRemark}
-                  className="gap-2"
-                  title="คัดลอกชื่อสาขาไปยังหมายเหตุ"
-                >
-                  <Copy className="w-4 h-4" />
-                  คัดลอกชื่อสาขา
-                </Button>
-              )}
               {!localPO.isBranchMapped && localPO.branch && localPO.isCustomerMapped && (
                 <QuickBranchMappingDialog 
                   customerName={localPO.customerName || ''} 
@@ -1091,27 +1008,6 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
           ยืนยันเอกสาร
         </Button>
       </div>
-
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>ยืนยันการลบเอกสาร</AlertDialogTitle>
-            <AlertDialogDescription>
-              ต้องการลบเอกสาร {po.poNumber} และรายการสินค้าทั้งหมดใช่หรือไม่? การลบไม่สามารถย้อนกลับได้
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>ยกเลิก</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); handleDeletePO(); }}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? 'กำลังลบ...' : 'ลบเอกสาร'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
