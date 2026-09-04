@@ -8,6 +8,13 @@
       "when": 1788256534879,
       "tag": "0000_email_import_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788492926867,
+      "tag": "0001_email_imports_dedupe_guard",
+      "breakpoints": true
     }
   ]
 }

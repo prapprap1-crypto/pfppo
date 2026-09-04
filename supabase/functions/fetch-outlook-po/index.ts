@@ -154,6 +154,7 @@ Deno.serve(async (req) => {
       );
 
       for (const att of pdfs) {
+        // Guard 1: same message + attachment already imported
         const { data: existing } = await admin
           .from('email_imports')
           .select('id')
@@ -177,6 +178,19 @@ Deno.serve(async (req) => {
         }
 
         const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+
+        // Guard 2: identical file content already imported (same PDF re-sent)
+        const digest = await crypto.subtle.digest('SHA-256', bytes);
+        const fileHash = Array.from(new Uint8Array(digest))
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+        const { data: sameFile } = await admin
+          .from('email_imports')
+          .select('id')
+          .eq('file_hash', fileHash)
+          .maybeSingle();
+        if (sameFile) { skipped++; continue; }
+
         const filePath = `email/${messageId}_${att.id}.pdf`.replace(/[^\w\-./]/g, '_');
 
         const { error: uploadError } = await admin.storage
@@ -198,10 +212,14 @@ Deno.serve(async (req) => {
           file_name: att.name,
           file_size: att.size ?? null,
           file_path: filePath,
+          file_hash: fileHash,
           status: 'FETCHED',
         });
-        if (insertError) errors.push(`insert ${att.name}: ${insertError.message}`);
-        else newCount++;
+        if (insertError) {
+          // Guard 3: unique index race — treat as duplicate, not an error
+          if (insertError.code === '23505') skipped++;
+          else errors.push(`insert ${att.name}: ${insertError.message}`);
+        } else newCount++;
       }
     }
 

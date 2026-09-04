@@ -200,6 +200,7 @@ export type Database = {
           attachment_id: string
           created_at: string
           error_message: string | null
+          file_hash: string | null
           file_name: string
           file_path: string | null
           file_size: number | null
@@ -218,6 +219,7 @@ export type Database = {
           attachment_id: string
           created_at?: string
           error_message?: string | null
+          file_hash?: string | null
           file_name: string
           file_path?: string | null
           file_size?: number | null
@@ -236,6 +238,7 @@ export type Database = {
           attachment_id?: string
           created_at?: string
           error_message?: string | null
+          file_hash?: string | null
           file_name?: string
           file_path?: string | null
           file_size?: number | null
