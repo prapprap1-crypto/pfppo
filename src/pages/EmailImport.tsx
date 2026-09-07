@@ -64,6 +64,9 @@ export default function EmailImport() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'PENDING' | 'PROCESSED' | 'ERROR' | 'ALL'>('PENDING');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const loadAll = async () => {
     setLoading(true);
@@ -81,11 +84,25 @@ export default function EmailImport() {
     setLoading(false);
   };
 
+  const matchStatus = (r: EmailImportRow) =>
+    statusFilter === 'ALL' ? true
+      : statusFilter === 'PROCESSED' ? r.status === 'PROCESSED'
+      : statusFilter === 'ERROR' ? r.status === 'ERROR'
+      : r.status !== 'PROCESSED' && r.status !== 'ERROR';
+
+  const filteredRows = rows.filter(matchStatus);
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRows = filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [statusFilter, pageSize]);
+
   const toggleOne = (id: string, checked: boolean) =>
     setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
 
   const toggleAll = (checked: boolean) =>
-    setSelectedIds(checked ? rows.map((r) => r.id) : []);
+    setSelectedIds(checked ? pagedRows.map((r) => r.id) : []);
+
 
   const deleteSelected = async () => {
     setDeleting(true);
