@@ -334,7 +334,7 @@ export default function EmailImport() {
               <TableRow>
                 <TableHead className="w-10">
                   <Checkbox
-                    checked={rows.length > 0 && selectedIds.length === rows.length}
+                    checked={pagedRows.length > 0 && pagedRows.every((r) => selectedIds.includes(r.id))}
                     onCheckedChange={(v) => toggleAll(!!v)}
                     aria-label="เลือกทั้งหมด"
                   />
