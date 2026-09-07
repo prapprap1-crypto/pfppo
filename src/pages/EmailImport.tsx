@@ -78,11 +78,14 @@ export default function EmailImport() {
         .limit(200),
       supabase.from('email_import_settings').select('last_synced_at').limit(1).maybeSingle(),
     ]);
-    setRows((list || []) as EmailImportRow[]);
+    const rowsData = (list || []) as EmailImportRow[];
+    setRows(rowsData);
     setLastSyncedAt(settings?.last_synced_at ?? null);
     setSelectedIds([]);
     setLoading(false);
+    return rowsData;
   };
+
 
   const matchStatus = (r: EmailImportRow) =>
     statusFilter === 'ALL' ? true
@@ -129,7 +132,12 @@ export default function EmailImport() {
         title: 'ดึงอีเมลสำเร็จ',
         description: `พบเมล ${data.scanned} ฉบับ, ไฟล์ใหม่ ${data.newCount} ไฟล์, ข้ามซ้ำ ${data.skipped}`,
       });
-      await loadAll();
+      const latest = await loadAll();
+      const pending = latest.filter((r) => r.status === 'FETCHED' && !r.po_id);
+      if (pending.length) {
+        toast({ title: `กำลังวิเคราะห์อัตโนมัติ ${pending.length} ไฟล์` });
+        await processAll(pending);
+      }
     } catch (e) {
       toast({
         title: 'ดึงอีเมลไม่สำเร็จ',
@@ -143,6 +151,7 @@ export default function EmailImport() {
 
   const processRow = async (row: EmailImportRow) => {
     if (!row.file_path) return;
+    if (row.status === 'PROCESSED' || row.po_id) return;
     setProcessingId(row.id);
     try {
       const { data: fileData, error: dlError } = await supabase.storage
@@ -254,11 +263,13 @@ export default function EmailImport() {
     }
   };
 
-  const processAll = async () => {
-    for (const row of rows.filter((r) => r.status === 'FETCHED')) {
+  const processAll = async (list?: EmailImportRow[]) => {
+    const target = (list ?? rows).filter((r) => r.status === 'FETCHED' && !r.po_id);
+    for (const row of target) {
       await processRow(row);
     }
   };
+
 
   const pendingCount = rows.filter((r) => r.status === 'FETCHED').length;
 
@@ -284,7 +295,7 @@ export default function EmailImport() {
               {fetching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
               ดึงเมลใหม่
             </Button>
-            <Button onClick={processAll} disabled={!pendingCount || !!processingId}>
+            <Button onClick={() => processAll()} disabled={!pendingCount || !!processingId}>
               <Play className="w-4 h-4 mr-2" />
               วิเคราะห์ทั้งหมด ({pendingCount})
             </Button>
