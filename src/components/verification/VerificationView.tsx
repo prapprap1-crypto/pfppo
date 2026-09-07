@@ -30,12 +30,13 @@ import {
   X,
   Loader2,
   Trash2,
-  Copy
+  Copy,
+  ScanLine
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { POHeader, POItem } from '@/types/po';
-import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping, updatePOHeader, updatePOItem, fetchProductMappings } from '@/lib/api/database';
+import { refreshPOMappings, refreshPOCustomerMapping, findBranchMapping, updatePOHeader, updatePOItem, fetchProductMappings, parsePOPdf, findMappingsForCodes, createPOItems } from '@/lib/api/database';
 import { supabase } from '@/integrations/supabase/client';
 import { usePOActionLog } from '@/hooks/usePOActionLog';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -94,6 +95,7 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
   const [mappingPrices, setMappingPrices] = useState<Map<string, number | null>>(new Map());
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     setLocalItems(items);
@@ -399,6 +401,137 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
   };
 
 
+  const handleAnalyzeDocument = async () => {
+    if (!po.sourceFile) {
+      toast({
+        title: 'ไม่พบไฟล์ PDF',
+        description: 'เอกสารนี้ไม่มีไฟล์ต้นฉบับสำหรับวิเคราะห์',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsAnalyzing(true);
+
+      const { data: fileData, error: dlError } = await supabase.storage
+        .from('po-files')
+        .download(po.sourceFile);
+      if (dlError || !fileData) throw new Error(dlError?.message || 'ดาวน์โหลดไฟล์ไม่สำเร็จ');
+
+      const pdfBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.onerror = () => reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
+        reader.readAsDataURL(fileData);
+      });
+
+      const result = await parsePOPdf(pdfBase64, po.sourceFile.split('/').pop() || 'po.pdf');
+      if (!result?.success) throw new Error(result?.error || 'วิเคราะห์ไฟล์ไม่สำเร็จ');
+      const extracted = result.data;
+
+      // Update header values from OCR (mapping fields are left untouched)
+      const headerUpdates = {
+        supplier_code: extracted.supplier_code ?? undefined,
+        supplier_name: extracted.supplier_name ?? undefined,
+        branch: extracted.branch ?? undefined,
+        document_date: extracted.document_date ?? undefined,
+        due_date: extracted.due_date ?? undefined,
+        net_total: extracted.net_total ?? undefined,
+        vat: extracted.vat ?? undefined,
+        grand_total: extracted.grand_total ?? undefined,
+        customer_name: extracted.customer_name ?? undefined,
+      };
+      await updatePOHeader(po.id, headerUpdates);
+
+      // Replace items with freshly extracted ones
+      const extractedItems = Array.isArray(extracted.items) ? extracted.items : [];
+      await supabase.from('po_items').delete().eq('po_id', po.id);
+
+      if (extractedItems.length > 0) {
+        const codes = extractedItems.map((i: any) => i.customer_product_code);
+        const existingMappings = await findMappingsForCodes(codes);
+        const mappingMap = new Map(existingMappings.map((m: any) => [m.customer_code, m]));
+
+        await createPOItems(
+          extractedItems.map((item: any) => {
+            const mapping: any = mappingMap.get(item.customer_product_code);
+            return {
+              po_id: po.id,
+              customer_product_code: item.customer_product_code,
+              customer_description: item.customer_description,
+              vendor_product_code: mapping?.vendor_code || '',
+              vendor_description: mapping?.vendor_desc || '',
+              quantity: item.quantity,
+              unit: item.unit || 'ลัง',
+              unit_price: item.unit_price,
+              amount: item.amount,
+              delivery_date: item.delivery_date,
+              is_mapped: !!mapping && !!mapping.vendor_code,
+            };
+          }),
+        );
+      }
+
+      // Reload items into the table
+      const { data: updatedItems } = await supabase
+        .from('po_items')
+        .select('*')
+        .eq('po_id', po.id)
+        .order('created_at', { ascending: true });
+
+      setLocalItems(
+        (updatedItems || []).map((item: any) => ({
+          id: item.id,
+          poId: item.po_id,
+          customerProductCode: item.customer_product_code,
+          customerDescription: item.customer_description || '',
+          vendorProductCode: item.vendor_product_code || '',
+          vendorDescription: item.vendor_description || '',
+          quantity: Number(item.quantity),
+          unit: item.unit || 'ลัง',
+          unitPrice: Number(item.unit_price),
+          amount: Number(item.amount),
+          deliveryDate: item.delivery_date || '',
+          isMapped: item.is_mapped || false,
+        })),
+      );
+
+      setLocalPO((prev) => ({
+        ...prev,
+        supplierCode: extracted.supplier_code ?? prev.supplierCode,
+        supplierName: extracted.supplier_name ?? prev.supplierName,
+        branch: extracted.branch ?? prev.branch,
+        documentDate: extracted.document_date ?? prev.documentDate,
+        dueDate: extracted.due_date ?? prev.dueDate,
+        netTotal: extracted.net_total ?? prev.netTotal,
+        vat: extracted.vat ?? prev.vat,
+        grandTotal: extracted.grand_total ?? prev.grandTotal,
+        customerName: extracted.customer_name ?? prev.customerName,
+      }));
+
+      await loadMappingPrices();
+
+      await logAction(po.id, 'edited', {
+        description: `วิเคราะห์เอกสารใหม่ (OCR) ${extractedItems.length} รายการ`,
+      });
+
+      toast({
+        title: 'วิเคราะห์เอกสารสำเร็จ',
+        description: `อ่านข้อมูลได้ ${extractedItems.length} รายการ`,
+      });
+    } catch (error) {
+      console.error('Error analyzing document:', error);
+      toast({
+        title: 'วิเคราะห์เอกสารไม่สำเร็จ',
+        description: error instanceof Error ? error.message : 'เกิดข้อผิดพลาด',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const handleRefreshMapping = async () => {
     try {
       setIsRefreshing(true);
@@ -598,6 +731,16 @@ export function VerificationView({ po, items, onVerify, onReject }: Verification
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAnalyzeDocument}
+              disabled={isAnalyzing || !po.sourceFile}
+              className="gap-2"
+            >
+              {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
+              {isAnalyzing ? 'กำลังวิเคราะห์...' : 'วิเคราะห์เอกสาร'}
+            </Button>
             {isAdmin && (
               <Button
                 variant="outline"
