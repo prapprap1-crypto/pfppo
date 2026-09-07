@@ -60,6 +60,7 @@ export default function EmailImport() {
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [batchRunning, setBatchRunning] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -149,10 +150,11 @@ export default function EmailImport() {
     }
   };
 
-  const processRow = async (row: EmailImportRow) => {
-    if (!row.file_path) return;
-    if (row.status === 'PROCESSED' || row.po_id) return;
-    setProcessingId(row.id);
+  const processRow = async (row: EmailImportRow, opts?: { quiet?: boolean }) => {
+    if (!row.file_path) return false;
+    if (row.status === 'PROCESSED' || row.po_id) return false;
+    const quiet = opts?.quiet ?? false;
+    if (!quiet) setProcessingId(row.id);
     try {
       const { data: fileData, error: dlError } = await supabase.storage
         .from('po-files')
@@ -251,24 +253,54 @@ export default function EmailImport() {
         })
         .eq('id', row.id);
 
-      toast({ title: 'นำเข้าสำเร็จ', description: `PO ${extracted.po_number}` });
-      await loadAll();
+      if (!quiet) {
+        toast({ title: 'นำเข้าสำเร็จ', description: `PO ${extracted.po_number}` });
+        await loadAll();
+      }
+      return true;
     } catch (e) {
       const message = e instanceof Error ? e.message : 'เกิดข้อผิดพลาด';
       await supabase.from('email_imports').update({ status: 'ERROR', error_message: message }).eq('id', row.id);
-      toast({ title: 'ประมวลผลไม่สำเร็จ', description: message, variant: 'destructive' });
-      await loadAll();
+      if (!quiet) {
+        toast({ title: 'ประมวลผลไม่สำเร็จ', description: message, variant: 'destructive' });
+        await loadAll();
+      }
+      return false;
     } finally {
-      setProcessingId(null);
+      if (!quiet) setProcessingId(null);
     }
   };
 
   const processAll = async (list?: EmailImportRow[]) => {
     const target = (list ?? rows).filter((r) => r.status === 'FETCHED' && !r.po_id);
-    for (const row of target) {
-      await processRow(row);
+    if (target.length === 0) return;
+
+    setBatchRunning(true);
+    let ok = 0;
+    let failed = 0;
+    try {
+      // ประมวลผลแบบขนาน (ครั้งละ 4 ไฟล์) เพื่อความเร็ว
+      const CONCURRENCY = 4;
+      let cursor = 0;
+      const worker = async () => {
+        while (cursor < target.length) {
+          const row = target[cursor++];
+          const success = await processRow(row, { quiet: true });
+          if (success) ok++;
+          else failed++;
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, target.length) }, worker));
+      await loadAll();
+      toast({
+        title: 'วิเคราะห์เสร็จสิ้น',
+        description: `สำเร็จ ${ok} รายการ${failed ? ` · ไม่สำเร็จ ${failed} รายการ` : ''}`,
+      });
+    } finally {
+      setBatchRunning(false);
     }
   };
+
 
 
   const pendingCount = rows.filter((r) => r.status === 'FETCHED').length;
@@ -295,8 +327,8 @@ export default function EmailImport() {
               {fetching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
               ดึงเมลใหม่
             </Button>
-            <Button onClick={() => processAll()} disabled={!pendingCount || !!processingId}>
-              <Play className="w-4 h-4 mr-2" />
+            <Button onClick={() => processAll()} disabled={!pendingCount || !!processingId || batchRunning}>
+              {batchRunning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
               วิเคราะห์ทั้งหมด ({pendingCount})
             </Button>
           </div>
