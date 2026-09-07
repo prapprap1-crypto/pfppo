@@ -12,6 +12,10 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { POPagination } from '@/components/po/POPagination';
 import { Loader2, Mail, RefreshCw, Play, CheckCircle, AlertCircle, Trash2, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +24,7 @@ import {
   findMappingsForCodes, findCustomerMappingByName,
 } from '@/lib/api/database';
 import { usePOActionLog } from '@/hooks/usePOActionLog';
+
 
 interface EmailImportRow {
   id: string;
