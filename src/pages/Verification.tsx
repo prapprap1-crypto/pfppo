@@ -76,8 +76,7 @@ const Verification = () => {
         };
         setPo(mappedPO);
 
-        // Fetch PO items
-        const itemsData = await fetchPOItems(id);
+        // Map PO items
         const mappedItems: POItem[] = (itemsData || []).map((item: any) => ({
           id: item.id,
           poId: item.po_id,
