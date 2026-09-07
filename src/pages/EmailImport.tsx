@@ -132,7 +132,12 @@ export default function EmailImport() {
         title: 'ดึงอีเมลสำเร็จ',
         description: `พบเมล ${data.scanned} ฉบับ, ไฟล์ใหม่ ${data.newCount} ไฟล์, ข้ามซ้ำ ${data.skipped}`,
       });
-      await loadAll();
+      const latest = await loadAll();
+      const pending = latest.filter((r) => r.status === 'FETCHED' && !r.po_id);
+      if (pending.length) {
+        toast({ title: `กำลังวิเคราะห์อัตโนมัติ ${pending.length} ไฟล์` });
+        await processAll(pending);
+      }
     } catch (e) {
       toast({
         title: 'ดึงอีเมลไม่สำเร็จ',
