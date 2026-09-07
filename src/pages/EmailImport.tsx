@@ -60,6 +60,7 @@ export default function EmailImport() {
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [batchRunning, setBatchRunning] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
