@@ -262,11 +262,13 @@ export default function EmailImport() {
     }
   };
 
-  const processAll = async () => {
-    for (const row of rows.filter((r) => r.status === 'FETCHED')) {
+  const processAll = async (list?: EmailImportRow[]) => {
+    const target = (list ?? rows).filter((r) => r.status === 'FETCHED' && !r.po_id);
+    for (const row of target) {
       await processRow(row);
     }
   };
+
 
   const pendingCount = rows.filter((r) => r.status === 'FETCHED').length;
 
