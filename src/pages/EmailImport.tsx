@@ -327,8 +327,8 @@ export default function EmailImport() {
               {fetching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
               ดึงเมลใหม่
             </Button>
-            <Button onClick={() => processAll()} disabled={!pendingCount || !!processingId}>
-              <Play className="w-4 h-4 mr-2" />
+            <Button onClick={() => processAll()} disabled={!pendingCount || !!processingId || batchRunning}>
+              {batchRunning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
               วิเคราะห์ทั้งหมด ({pendingCount})
             </Button>
           </div>
