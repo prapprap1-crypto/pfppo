@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { fetchPOHeaders, findBranchMapping } from '@/lib/api/database';
+import { batchFetchBranchMappings } from '@/lib/api/database';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,51 +34,47 @@ const PendingVerification = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const headers = await fetchPOHeaders();
-      
-      // Filter only pending verification statuses (IMPORTED, NEED_REVIEW)
-      const pendingHeaders = (headers || []).filter(
-        (h: any) => h.status === 'IMPORTED' || h.status === 'NEED_REVIEW'
-      );
-      
-      // Map headers with branch mapping data
-      const mappedHeaders = await Promise.all(
-        pendingHeaders.map(async (h: any) => {
-          let branchMappingResult = null;
-          if (h.customer_name && h.branch) {
-            try {
-              branchMappingResult = await findBranchMapping(h.customer_name, h.branch);
-            } catch (err) {
-              console.error('Error finding branch mapping:', err);
-            }
-          }
-          
-          return {
-            id: h.id,
-            poNumber: h.po_number,
-            customerName: h.customer_name,
-            vendorCustomerCode: h.vendor_customer_code,
-            vendorCustomerName: h.vendor_customer_name,
-            isCustomerMapped: h.is_customer_mapped,
-            vendorBranchCode: branchMappingResult?.branchMapping?.vendor_branch_code || undefined,
-            vendorBranchName: branchMappingResult?.branchMapping?.vendor_branch_name || undefined,
-            isBranchMapped: !!(branchMappingResult?.branchMapping?.vendor_branch_code),
-            supplierCode: h.supplier_code,
-            supplierName: h.supplier_name,
-            branch: h.branch,
-            documentDate: h.document_date,
-            dueDate: h.due_date,
-            netTotal: Number(h.net_total),
-            vat: Number(h.vat),
-            grandTotal: Number(h.grand_total),
-            status: h.status,
-            sourceFile: h.source_file,
-            createdAt: h.created_at,
-            updatedAt: h.updated_at,
-          };
-        })
-      );
-      
+      // Server-side filter: only pending verification statuses
+      const { data, error } = await supabase
+        .from('po_headers')
+        .select('id, po_number, customer_name, vendor_customer_code, vendor_customer_name, is_customer_mapped, supplier_code, supplier_name, branch, document_date, due_date, net_total, vat, grand_total, status, source_file, created_at, updated_at')
+        .in('status', ['IMPORTED', 'NEED_REVIEW'])
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const pendingHeaders = data || [];
+
+      // Batch fetch branch mappings (avoids N+1 queries)
+      const branchMap = await batchFetchBranchMappings(pendingHeaders as any);
+
+      const mappedHeaders = pendingHeaders.map((h: any) => {
+        const bm = branchMap.get(`${h.customer_name}|||${h.branch}`);
+        return {
+          id: h.id,
+          poNumber: h.po_number,
+          customerName: h.customer_name,
+          vendorCustomerCode: h.vendor_customer_code,
+          vendorCustomerName: h.vendor_customer_name,
+          isCustomerMapped: h.is_customer_mapped,
+          vendorBranchCode: bm?.vendor_branch_code || undefined,
+          vendorBranchName: bm?.vendor_branch_name || undefined,
+          isBranchMapped: !!bm?.vendor_branch_code,
+          supplierCode: h.supplier_code,
+          supplierName: h.supplier_name,
+          branch: h.branch,
+          documentDate: h.document_date,
+          dueDate: h.due_date,
+          netTotal: Number(h.net_total),
+          vat: Number(h.vat),
+          grandTotal: Number(h.grand_total),
+          status: h.status,
+          sourceFile: h.source_file,
+          createdAt: h.created_at,
+          updatedAt: h.updated_at,
+        } as POHeader;
+      });
+
       setPOHeaders(mappedHeaders);
     } catch (error) {
       console.error('Error loading pending POs:', error);
@@ -90,6 +87,7 @@ const PendingVerification = () => {
   useEffect(() => {
     loadData();
   }, []);
+
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);

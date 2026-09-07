@@ -25,9 +25,13 @@ const Verification = () => {
 
       try {
         setLoading(true);
-        
-        // Fetch PO header
-        const poData = await fetchPOHeaderById(id);
+
+        // Fetch header and items in parallel
+        const [poData, itemsData] = await Promise.all([
+          fetchPOHeaderById(id),
+          fetchPOItems(id),
+        ]);
+
         if (!poData) {
           setError('ไม่พบเอกสาร PO ที่ต้องการ');
           setLoading(false);
@@ -43,6 +47,7 @@ const Verification = () => {
             console.error('Error finding branch mapping:', err);
           }
         }
+
 
         // Map to POHeader type
         const mappedPO: POHeader = {
@@ -71,8 +76,7 @@ const Verification = () => {
         };
         setPo(mappedPO);
 
-        // Fetch PO items
-        const itemsData = await fetchPOItems(id);
+        // Map PO items
         const mappedItems: POItem[] = (itemsData || []).map((item: any) => ({
           id: item.id,
           poId: item.po_id,
