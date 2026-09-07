@@ -117,8 +117,11 @@ Deno.serve(async (req) => {
       );
     }
     const listJson = await listRes.json();
-    const senderLc = senderFilter.toLowerCase();
-    const subjectLc = subjectFilter.toLowerCase();
+    // Multiple senders/subjects allowed, separated by comma, semicolon or newline
+    const splitTerms = (v: string) =>
+      v.split(/[,;\n]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+    const senderTerms = splitTerms(senderFilter);
+    const subjectTerms = splitTerms(subjectFilter);
     const messages: Array<Record<string, unknown>> = (listJson.value || [])
       .filter((m: Record<string, unknown>) => {
         if (!m.hasAttachments) return false;
@@ -126,8 +129,8 @@ Deno.serve(async (req) => {
           (m.from as { emailAddress?: { address?: string } })?.emailAddress?.address ?? ''
         ).toLowerCase();
         const subj = ((m.subject as string) ?? '').toLowerCase();
-        if (senderLc && !addr.includes(senderLc)) return false;
-        if (subjectLc && !subj.includes(subjectLc)) return false;
+        if (senderTerms.length && !senderTerms.some((t) => addr.includes(t))) return false;
+        if (subjectTerms.length && !subjectTerms.some((t) => subj.includes(t))) return false;
         return true;
       })
       .slice(0, maxMessages);
