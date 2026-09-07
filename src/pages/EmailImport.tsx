@@ -306,15 +306,29 @@ export default function EmailImport() {
                 ผิดพลาด {rows.filter((r) => r.status === 'ERROR').length}
               </Badge>
             )}
-            {selectedIds.length > 0 && (
-              <div className="ml-auto flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">เลือก {selectedIds.length} รายการ</span>
-                <Button size="sm" variant="destructive" onClick={() => setConfirmOpen(true)}>
-                  <Trash2 className="w-4 h-4 mr-1" /> ลบที่เลือก
-                </Button>
-              </div>
-            )}
+            <div className="ml-auto flex items-center gap-2">
+              {selectedIds.length > 0 && (
+                <>
+                  <span className="text-sm text-muted-foreground">เลือก {selectedIds.length} รายการ</span>
+                  <Button size="sm" variant="destructive" onClick={() => setConfirmOpen(true)}>
+                    <Trash2 className="w-4 h-4 mr-1" /> ลบที่เลือก
+                  </Button>
+                </>
+              )}
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+                <SelectTrigger className="w-44 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING">รอวิเคราะห์</SelectItem>
+                  <SelectItem value="PROCESSED">วิเคราะห์แล้ว</SelectItem>
+                  <SelectItem value="ERROR">ผิดพลาด</SelectItem>
+                  <SelectItem value="ALL">ทุกสถานะ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
           <Table>
             <TableHeader>
               <TableRow>
