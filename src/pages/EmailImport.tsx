@@ -78,11 +78,14 @@ export default function EmailImport() {
         .limit(200),
       supabase.from('email_import_settings').select('last_synced_at').limit(1).maybeSingle(),
     ]);
-    setRows((list || []) as EmailImportRow[]);
+    const rowsData = (list || []) as EmailImportRow[];
+    setRows(rowsData);
     setLastSyncedAt(settings?.last_synced_at ?? null);
     setSelectedIds([]);
     setLoading(false);
+    return rowsData;
   };
+
 
   const matchStatus = (r: EmailImportRow) =>
     statusFilter === 'ALL' ? true
