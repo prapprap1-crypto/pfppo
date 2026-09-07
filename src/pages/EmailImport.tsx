@@ -354,14 +354,14 @@ export default function EmailImport() {
                     <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
-              ) : rows.length === 0 ? (
+              ) : pagedRows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    ยังไม่มีไฟล์จากอีเมล — กด "ดึงเมลใหม่" เพื่อเริ่ม
+                    ไม่พบรายการตามสถานะที่เลือก
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map((row) => (
+                pagedRows.map((row) => (
                   <TableRow key={row.id} data-state={selectedIds.includes(row.id) ? 'selected' : undefined}>
                     <TableCell>
                       <Checkbox
