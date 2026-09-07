@@ -149,10 +149,11 @@ export default function EmailImport() {
     }
   };
 
-  const processRow = async (row: EmailImportRow) => {
-    if (!row.file_path) return;
-    if (row.status === 'PROCESSED' || row.po_id) return;
-    setProcessingId(row.id);
+  const processRow = async (row: EmailImportRow, opts?: { quiet?: boolean }) => {
+    if (!row.file_path) return false;
+    if (row.status === 'PROCESSED' || row.po_id) return false;
+    const quiet = opts?.quiet ?? false;
+    if (!quiet) setProcessingId(row.id);
     try {
       const { data: fileData, error: dlError } = await supabase.storage
         .from('po-files')
