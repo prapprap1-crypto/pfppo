@@ -94,17 +94,23 @@ export default function EmailImportSettings() {
                 <Label>กรองผู้ส่ง (อีเมล/โดเมน)</Label>
                 <Input
                   value={settings.sender_filter ?? ''}
-                  placeholder="เช่น @bnn.co.th"
+                  placeholder="เช่น @bnn.co.th, somchai@abc.com"
                   onChange={(e) => setSettings({ ...settings, sender_filter: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  ใส่ได้หลายรายการ คั่นด้วยเครื่องหมายจุลภาค ( , ) — ตรงกับรายการใดรายการหนึ่งก็ถือว่าผ่าน
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>กรองหัวข้อเมล</Label>
                 <Input
                   value={settings.subject_filter ?? ''}
-                  placeholder="เช่น ใบสั่งซื้อ"
+                  placeholder="เช่น ใบสั่งซื้อ, PO"
                   onChange={(e) => setSettings({ ...settings, subject_filter: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  ใส่ได้หลายคำ คั่นด้วยเครื่องหมายจุลภาค ( , )
+                </p>
               </div>
             </div>
             <div className="flex items-center justify-between">
