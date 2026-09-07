@@ -409,6 +409,14 @@ export default function EmailImport() {
               )}
             </TableBody>
           </Table>
+          <POPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filteredRows.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </Card>
 
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
