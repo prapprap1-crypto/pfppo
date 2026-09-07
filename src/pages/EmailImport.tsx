@@ -151,6 +151,7 @@ export default function EmailImport() {
 
   const processRow = async (row: EmailImportRow) => {
     if (!row.file_path) return;
+    if (row.status === 'PROCESSED' || row.po_id) return;
     setProcessingId(row.id);
     try {
       const { data: fileData, error: dlError } = await supabase.storage
@@ -294,7 +295,7 @@ export default function EmailImport() {
               {fetching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
               ดึงเมลใหม่
             </Button>
-            <Button onClick={processAll} disabled={!pendingCount || !!processingId}>
+            <Button onClick={() => processAll()} disabled={!pendingCount || !!processingId}>
               <Play className="w-4 h-4 mr-2" />
               วิเคราะห์ทั้งหมด ({pendingCount})
             </Button>
