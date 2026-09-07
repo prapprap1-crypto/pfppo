@@ -12,6 +12,10 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { POPagination } from '@/components/po/POPagination';
 import { Loader2, Mail, RefreshCw, Play, CheckCircle, AlertCircle, Trash2, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +24,7 @@ import {
   findMappingsForCodes, findCustomerMappingByName,
 } from '@/lib/api/database';
 import { usePOActionLog } from '@/hooks/usePOActionLog';
+
 
 interface EmailImportRow {
   id: string;
@@ -59,6 +64,9 @@ export default function EmailImport() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'PENDING' | 'PROCESSED' | 'ERROR' | 'ALL'>('PENDING');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const loadAll = async () => {
     setLoading(true);
@@ -76,11 +84,25 @@ export default function EmailImport() {
     setLoading(false);
   };
 
+  const matchStatus = (r: EmailImportRow) =>
+    statusFilter === 'ALL' ? true
+      : statusFilter === 'PROCESSED' ? r.status === 'PROCESSED'
+      : statusFilter === 'ERROR' ? r.status === 'ERROR'
+      : r.status !== 'PROCESSED' && r.status !== 'ERROR';
+
+  const filteredRows = rows.filter(matchStatus);
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRows = filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [statusFilter, pageSize]);
+
   const toggleOne = (id: string, checked: boolean) =>
     setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
 
   const toggleAll = (checked: boolean) =>
-    setSelectedIds(checked ? rows.map((r) => r.id) : []);
+    setSelectedIds(checked ? pagedRows.map((r) => r.id) : []);
+
 
   const deleteSelected = async () => {
     setDeleting(true);
@@ -284,21 +306,35 @@ export default function EmailImport() {
                 ผิดพลาด {rows.filter((r) => r.status === 'ERROR').length}
               </Badge>
             )}
-            {selectedIds.length > 0 && (
-              <div className="ml-auto flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">เลือก {selectedIds.length} รายการ</span>
-                <Button size="sm" variant="destructive" onClick={() => setConfirmOpen(true)}>
-                  <Trash2 className="w-4 h-4 mr-1" /> ลบที่เลือก
-                </Button>
-              </div>
-            )}
+            <div className="ml-auto flex items-center gap-2">
+              {selectedIds.length > 0 && (
+                <>
+                  <span className="text-sm text-muted-foreground">เลือก {selectedIds.length} รายการ</span>
+                  <Button size="sm" variant="destructive" onClick={() => setConfirmOpen(true)}>
+                    <Trash2 className="w-4 h-4 mr-1" /> ลบที่เลือก
+                  </Button>
+                </>
+              )}
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+                <SelectTrigger className="w-44 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING">รอวิเคราะห์</SelectItem>
+                  <SelectItem value="PROCESSED">วิเคราะห์แล้ว</SelectItem>
+                  <SelectItem value="ERROR">ผิดพลาด</SelectItem>
+                  <SelectItem value="ALL">ทุกสถานะ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10">
                   <Checkbox
-                    checked={rows.length > 0 && selectedIds.length === rows.length}
+                    checked={pagedRows.length > 0 && pagedRows.every((r) => selectedIds.includes(r.id))}
                     onCheckedChange={(v) => toggleAll(!!v)}
                     aria-label="เลือกทั้งหมด"
                   />
@@ -318,14 +354,14 @@ export default function EmailImport() {
                     <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
-              ) : rows.length === 0 ? (
+              ) : pagedRows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    ยังไม่มีไฟล์จากอีเมล — กด "ดึงเมลใหม่" เพื่อเริ่ม
+                    ไม่พบรายการตามสถานะที่เลือก
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map((row) => (
+                pagedRows.map((row) => (
                   <TableRow key={row.id} data-state={selectedIds.includes(row.id) ? 'selected' : undefined}>
                     <TableCell>
                       <Checkbox
@@ -373,6 +409,14 @@ export default function EmailImport() {
               )}
             </TableBody>
           </Table>
+          <POPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filteredRows.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </Card>
 
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
