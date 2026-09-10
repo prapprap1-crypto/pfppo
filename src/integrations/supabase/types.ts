@@ -389,6 +389,7 @@ export type Database = {
           customer_name: string | null
           document_date: string
           due_date: string
+          file_hash: string | null
           grand_total: number | null
           id: string
           is_customer_mapped: boolean | null
@@ -413,6 +414,7 @@ export type Database = {
           customer_name?: string | null
           document_date: string
           due_date: string
+          file_hash?: string | null
           grand_total?: number | null
           id?: string
           is_customer_mapped?: boolean | null
@@ -437,6 +439,7 @@ export type Database = {
           customer_name?: string | null
           document_date?: string
           due_date?: string
+          file_hash?: string | null
           grand_total?: number | null
           id?: string
           is_customer_mapped?: boolean | null
