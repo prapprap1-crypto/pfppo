@@ -20,7 +20,7 @@ import { Loader2, Mail, RefreshCw, Play, CheckCircle, AlertCircle, Trash2, Clock
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
-  createPOHeader, createPOItems, autoCreateMappingsForItems,
+  createPOHeader, createPOItems, autoCreateMappingsForItems, computeFileHash,
   findMappingsForCodes, findCustomerMappingByName,
 } from '@/lib/api/database';
 import { usePOActionLog } from '@/hooks/usePOActionLog';
@@ -161,6 +161,7 @@ export default function EmailImport() {
         .download(row.file_path);
       if (dlError || !fileData) throw new Error(dlError?.message || 'ดาวน์โหลดไฟล์ไม่สำเร็จ');
 
+      const fileHash = await computeFileHash(fileData);
       const pdfBase64 = await blobToBase64(fileData);
       const { data, error } = await supabase.functions.invoke('parse-po-pdf', {
         body: { pdfBase64, fileName: row.file_name },
@@ -197,6 +198,7 @@ export default function EmailImport() {
         grand_total: extracted.grand_total,
         source_file: row.file_path,
         status: 'NEED_REVIEW',
+        file_hash: fileHash,
       });
 
       if (poHeader) {
