@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { createPOHeader, createPOItems, autoCreateMappingsForItems, findMappingsForCodes, findCustomerMappingByName } from '@/lib/api/database';
+import { createPOHeader, createPOItems, autoCreateMappingsForItems, findMappingsForCodes, findCustomerMappingByName, computeFileHash, checkDuplicateFileHash } from '@/lib/api/database';
 import { usePOActionLog } from '@/hooks/usePOActionLog';
 import {
   Dialog,
@@ -150,6 +150,13 @@ export function FileUploadZone({
       });
 
       try {
+        // Duplicate guard: same PDF content already imported
+        const fileHash = await computeFileHash(file);
+        const { exists: dupFile, existingPO: dupPO } = await checkDuplicateFileHash(fileHash);
+        if (dupFile) {
+          throw new Error(`ไฟล์นี้ถูกนำเข้าแล้ว (PO ${dupPO.po_number})`);
+        }
+
         // Convert PDF to base64
         const pdfBase64 = await fileToBase64(file);
 
