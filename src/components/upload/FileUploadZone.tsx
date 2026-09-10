@@ -234,7 +234,8 @@ export function FileUploadZone({
           vat: extractedData.vat,
           grand_total: extractedData.grand_total,
           source_file: uploadError ? null : filePath,
-          status: 'NEED_REVIEW'
+          status: 'NEED_REVIEW',
+          file_hash: fileHash
         });
 
         // Log PO import action
