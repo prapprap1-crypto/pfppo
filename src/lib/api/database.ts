@@ -190,6 +190,27 @@ export async function checkDuplicatePO(poNumber: string): Promise<{ exists: bool
   return { exists: !!data, existingPO: data };
 }
 
+// Compute SHA-256 hash of a file/blob (used to detect duplicate PDF imports)
+export async function computeFileHash(file: Blob): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// Check if the exact same PDF file was already imported
+export async function checkDuplicateFileHash(fileHash: string) {
+  const { data, error } = await supabase
+    .from('po_headers')
+    .select('id, po_number, created_at')
+    .eq('file_hash', fileHash)
+    .maybeSingle();
+
+  if (error) throw error;
+  return { exists: !!data, existingPO: data };
+}
+
 export async function createPOHeader(poHeader: {
   po_number: string;
   supplier_code: string;
@@ -206,16 +227,31 @@ export async function createPOHeader(poHeader: {
   vendor_customer_code?: string;
   vendor_customer_name?: string;
   is_customer_mapped?: boolean;
+  file_hash?: string | null;
 }) {
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
+  const thaiDate = (value: string) => {
+    const d = new Date(value);
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  };
+
+  // Check for duplicate file content
+  if (poHeader.file_hash) {
+    const { exists: fileExists, existingPO: sameFile } = await checkDuplicateFileHash(poHeader.file_hash);
+    if (fileExists) {
+      throw new Error(`ไฟล์นี้ถูกนำเข้าแล้ว (PO ${sameFile.po_number} เมื่อ ${thaiDate(sameFile.created_at)})`);
+    }
+  }
+
   // Check for duplicate PO
   const { exists, existingPO } = await checkDuplicatePO(poHeader.po_number);
   if (exists) {
-    throw new Error(`PO ${poHeader.po_number} มีอยู่แล้วในระบบ (นำเข้าเมื่อ ${(() => { const d = new Date(existingPO.created_at); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; })()})`);
+    throw new Error(`PO ${poHeader.po_number} มีอยู่แล้วในระบบ (นำเข้าเมื่อ ${thaiDate(existingPO.created_at)})`);
   }
+
 
   const { data, error } = await supabase
     .from('po_headers')
