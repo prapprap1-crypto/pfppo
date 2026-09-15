@@ -283,6 +283,30 @@ export default function EmailImport() {
       return true;
     } catch (e) {
       const message = e instanceof Error ? e.message : 'เกิดข้อผิดพลาด';
+      // รายการซ้ำ (ไฟล์เดิม หรือเลข PO เดิม) ถือว่า "ข้ามซ้ำ" ไม่ใช่ข้อผิดพลาด
+      const isDuplicate = message.includes('ถูกนำเข้าแล้ว') || message.includes('มีอยู่แล้วในระบบ');
+      if (isDuplicate) {
+        const poNumberMatch = message.match(/PO\s+(\S+)/);
+        let dupId: string | null = null;
+        if (poNumberMatch) {
+          const { existingPO } = await checkDuplicatePO(poNumberMatch[1]);
+          dupId = existingPO?.id ?? null;
+        }
+        await supabase
+          .from('email_imports')
+          .update({
+            status: 'PROCESSED',
+            po_id: dupId,
+            processed_at: new Date().toISOString(),
+            error_message: `ข้ามซ้ำ: ${message}`,
+          })
+          .eq('id', row.id);
+        if (!quiet) {
+          toast({ title: 'ข้ามรายการซ้ำ', description: message });
+          await loadAll();
+        }
+        return true;
+      }
       await supabase.from('email_imports').update({ status: 'ERROR', error_message: message }).eq('id', row.id);
       if (!quiet) {
         toast({ title: 'ประมวลผลไม่สำเร็จ', description: message, variant: 'destructive' });
