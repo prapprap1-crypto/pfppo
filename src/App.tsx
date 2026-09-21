@@ -17,6 +17,7 @@ import Users from "./pages/Users";
 import Profile from "./pages/Profile";
 import ActivityLog from "./pages/ActivityLog";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import WarehouseSettings from "./pages/WarehouseSettings";
 import VehiclePositionSettings from "./pages/VehiclePositionSettings";
@@ -54,6 +55,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/po-list" element={<ProtectedRoute><POList /></ProtectedRoute>} />
       <Route path="/email-import" element={<ProtectedRoute><EmailImport /></ProtectedRoute>} />

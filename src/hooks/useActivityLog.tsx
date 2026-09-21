@@ -19,7 +19,8 @@ export type ActivityAction =
   | 'customer_mapping_deleted'
   | 'role_changed'
   | 'user_deleted'
-  | 'user_approved';
+  | 'user_approved'
+  | 'password_reset_sent';
 
 export interface ActivityLogEntry {
   action: ActivityAction;

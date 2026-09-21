@@ -43,7 +43,8 @@ import {
   Trash2,
   ShieldAlert,
   CheckCircle,
-  XCircle
+  XCircle,
+  KeyRound
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -246,6 +247,37 @@ export default function Users() {
       toast({
         title: 'เกิดข้อผิดพลาด',
         description: 'ไม่สามารถอนุมัติผู้ใช้ได้',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleSendPasswordReset = async (target: UserWithRole) => {
+    if (!target.email) return;
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(target.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      await logActivity({
+        action: 'password_reset_sent',
+        entity_type: 'user',
+        entity_id: target.id,
+        details: { user_email: target.email }
+      });
+
+      toast({
+        title: 'ส่งลิงก์รีเซ็ตรหัสผ่านแล้ว',
+        description: `ส่งไปยัง ${target.email} เรียบร้อย`
+      });
+    } catch (error) {
+      console.error('Error sending password reset:', error);
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถส่งลิงก์รีเซ็ตรหัสผ่านได้',
         variant: 'destructive'
       });
     }
@@ -470,6 +502,10 @@ export default function Users() {
                             >
                               <UserCog className="w-4 h-4 mr-2" />
                               เปลี่ยนบทบาท
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSendPasswordReset(u)}>
+                              <KeyRound className="w-4 h-4 mr-2" />
+                              ส่งลิงก์รีเซ็ตรหัสผ่าน
                             </DropdownMenuItem>
                             {u.id !== user?.id && (
                               <DropdownMenuItem 
