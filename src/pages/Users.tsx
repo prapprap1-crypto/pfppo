@@ -503,6 +503,10 @@ export default function Users() {
                               <UserCog className="w-4 h-4 mr-2" />
                               เปลี่ยนบทบาท
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSendPasswordReset(u)}>
+                              <KeyRound className="w-4 h-4 mr-2" />
+                              ส่งลิงก์รีเซ็ตรหัสผ่าน
+                            </DropdownMenuItem>
                             {u.id !== user?.id && (
                               <DropdownMenuItem 
                                 onClick={() => {
