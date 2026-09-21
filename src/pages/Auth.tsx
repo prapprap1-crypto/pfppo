@@ -242,6 +242,35 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    try {
+      emailSchema.parse(email);
+    } catch {
+      setErrors({ email: 'กรุณากรอกอีเมลก่อนรีเซ็ตรหัสผ่าน' });
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+
+    if (error) {
+      toast({
+        title: 'ส่งลิงก์รีเซ็ตรหัสผ่านไม่สำเร็จ',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    toast({
+      title: 'ส่งลิงก์รีเซ็ตรหัสผ่านแล้ว',
+      description: `กรุณาตรวจสอบอีเมล ${email} เพื่อตั้งรหัสผ่านใหม่`,
+    });
+  };
+
   const handleBackToCredentials = () => {
     setAuthStep('credentials');
     setOtpValue('');
@@ -427,6 +456,15 @@ const Auth = () => {
                   </div>
                   <Button type="submit" className="w-full bg-primary" disabled={loading}>
                     {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="w-full"
+                    onClick={handleForgotPassword}
+                    disabled={loading}
+                  >
+                    ลืมรหัสผ่าน?
                   </Button>
                 </form>
               </TabsContent>
