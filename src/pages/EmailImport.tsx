@@ -155,6 +155,19 @@ export default function EmailImport() {
     if (!row.file_path) return false;
     if (row.status === 'PROCESSED' || row.po_id) return false;
     const quiet = opts?.quiet ?? false;
+    // จองรายการก่อน (กันการวิเคราะห์ไฟล์เดียวกันซ้อนกันจากหลายหน้าจอ/หลายรอบ)
+    const staleBefore = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { data: claimed } = await supabase
+      .from('email_imports')
+      .update({ status: 'PROCESSING', error_message: null })
+      .eq('id', row.id)
+      .is('po_id', null)
+      .or(`status.in.(FETCHED,ERROR),and(status.eq.PROCESSING,updated_at.lt.${staleBefore})`)
+      .select('id');
+    if (!claimed || claimed.length === 0) {
+      if (!quiet) await loadAll();
+      return false;
+    }
     if (!quiet) setProcessingId(row.id);
     try {
       const { data: fileData, error: dlError } = await supabase.storage
@@ -184,11 +197,18 @@ export default function EmailImport() {
       }
 
       const pdfBase64 = await blobToBase64(fileData);
-      const { data, error } = await supabase.functions.invoke('parse-po-pdf', {
-        body: { pdfBase64, fileName: row.file_name },
-      });
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'วิเคราะห์ไฟล์ไม่สำเร็จ');
+      // ลองใหม่อัตโนมัติสูงสุด 3 ครั้ง กรณี AI ตอบผิดพลาดชั่วคราว
+      let data: { success?: boolean; data?: any; error?: string } | null = null;
+      let lastErr: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const res = await supabase.functions.invoke('parse-po-pdf', {
+          body: { pdfBase64, fileName: row.file_name },
+        });
+        if (!res.error && res.data?.success) { data = res.data; break; }
+        lastErr = res.error ?? new Error(res.data?.error || 'วิเคราะห์ไฟล์ไม่สำเร็จ');
+        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+      }
+      if (!data) throw lastErr instanceof Error ? lastErr : new Error('วิเคราะห์ไฟล์ไม่สำเร็จ');
       const extracted = data.data;
 
       let vendorCustomerCode = '';
@@ -307,7 +327,12 @@ export default function EmailImport() {
         }
         return true;
       }
-      await supabase.from('email_imports').update({ status: 'ERROR', error_message: message }).eq('id', row.id);
+      // ไม่เขียนทับรายการที่สำเร็จแล้ว (มี PO แล้ว)
+      await supabase
+        .from('email_imports')
+        .update({ status: 'ERROR', error_message: `วิเคราะห์ไม่สำเร็จ: ${message}` })
+        .eq('id', row.id)
+        .is('po_id', null);
       if (!quiet) {
         toast({ title: 'ประมวลผลไม่สำเร็จ', description: message, variant: 'destructive' });
         await loadAll();
