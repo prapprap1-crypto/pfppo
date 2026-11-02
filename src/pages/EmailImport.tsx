@@ -20,7 +20,7 @@ import { Loader2, Mail, RefreshCw, Play, CheckCircle, AlertCircle, Trash2, Clock
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
-  createPOHeader, createPOItems, autoCreateMappingsForItems, computeFileHash,
+  createPOHeader, resolveDueDate, createPOItems, autoCreateMappingsForItems, computeFileHash,
   checkDuplicateFileHash, checkDuplicatePO,
   findMappingsForCodes, findCustomerMappingByName,
 } from '@/lib/api/database';
