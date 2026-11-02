@@ -20,7 +20,7 @@ import { Loader2, Mail, RefreshCw, Play, CheckCircle, AlertCircle, Trash2, Clock
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
-  createPOHeader, createPOItems, autoCreateMappingsForItems, computeFileHash,
+  createPOHeader, resolveDueDate, createPOItems, autoCreateMappingsForItems, computeFileHash,
   checkDuplicateFileHash, checkDuplicatePO,
   findMappingsForCodes, findCustomerMappingByName,
 } from '@/lib/api/database';
@@ -233,7 +233,7 @@ export default function EmailImport() {
         supplier_name: extracted.supplier_name,
         branch: extracted.branch,
         document_date: extracted.document_date,
-        due_date: extracted.due_date,
+        due_date: resolveDueDate(extracted),
         net_total: extracted.net_total,
         vat: extracted.vat,
         grand_total: extracted.grand_total,

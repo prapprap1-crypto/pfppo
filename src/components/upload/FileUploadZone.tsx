@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { createPOHeader, createPOItems, autoCreateMappingsForItems, findMappingsForCodes, findCustomerMappingByName, computeFileHash, checkDuplicateFileHash } from '@/lib/api/database';
+import { createPOHeader, resolveDueDate, createPOItems, autoCreateMappingsForItems, findMappingsForCodes, findCustomerMappingByName, computeFileHash, checkDuplicateFileHash } from '@/lib/api/database';
 import { usePOActionLog } from '@/hooks/usePOActionLog';
 import {
   Dialog,
@@ -229,7 +229,7 @@ export function FileUploadZone({
           supplier_name: extractedData.supplier_name,
           branch: extractedData.branch,
           document_date: extractedData.document_date,
-          due_date: extractedData.due_date,
+          due_date: resolveDueDate(extractedData),
           net_total: extractedData.net_total,
           vat: extractedData.vat,
           grand_total: extractedData.grand_total,

@@ -211,6 +211,37 @@ export async function checkDuplicateFileHash(fileHash: string) {
   return { exists: !!data, existingPO: data };
 }
 
+/** Normalize a date string (yyyy-mm-dd or dd/mm/yyyy) to ISO yyyy-mm-dd, or null. */
+function toIsoDate(value: unknown): string | null {
+  if (!value || typeof value !== 'string') return null;
+  const s = value.trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return null;
+}
+
+/**
+ * due_date is NOT NULL in po_headers. Fallback order:
+ * header due_date → first item delivery_date → document_date → today.
+ */
+export function resolveDueDate(extracted: {
+  due_date?: string | null;
+  document_date?: string | null;
+  items?: Array<{ delivery_date?: string | null }> | null;
+}): string {
+  const fromHeader = toIsoDate(extracted.due_date);
+  if (fromHeader) return fromHeader;
+  for (const item of extracted.items || []) {
+    const d = toIsoDate(item?.delivery_date);
+    if (d) return d;
+  }
+  const fromDoc = toIsoDate(extracted.document_date);
+  if (fromDoc) return fromDoc;
+  return new Date().toISOString().slice(0, 10);
+}
+
 export async function createPOHeader(poHeader: {
   po_number: string;
   supplier_code: string;
