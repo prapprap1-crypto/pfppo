@@ -229,7 +229,7 @@ export function FileUploadZone({
           supplier_name: extractedData.supplier_name,
           branch: extractedData.branch,
           document_date: extractedData.document_date,
-          due_date: extractedData.due_date,
+          due_date: resolveDueDate(extractedData),
           net_total: extractedData.net_total,
           vat: extractedData.vat,
           grand_total: extractedData.grand_total,

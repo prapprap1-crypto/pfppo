@@ -233,7 +233,7 @@ export default function EmailImport() {
         supplier_name: extracted.supplier_name,
         branch: extracted.branch,
         document_date: extracted.document_date,
-        due_date: extracted.due_date,
+        due_date: resolveDueDate(extracted),
         net_total: extracted.net_total,
         vat: extracted.vat,
         grand_total: extracted.grand_total,
