@@ -343,8 +343,10 @@ export default function EmailImport() {
     }
   };
 
-  const processAll = async (list?: EmailImportRow[]) => {
-    const target = (list ?? rows).filter((r) => r.status === 'FETCHED' && !r.po_id);
+  const processAll = async (list?: EmailImportRow[], includeErrors = false) => {
+    const target = (list ?? rows).filter(
+      (r) => !r.po_id && (r.status === 'FETCHED' || (includeErrors && r.status === 'ERROR')),
+    );
     if (target.length === 0) return;
 
     setBatchRunning(true);
@@ -425,6 +427,24 @@ export default function EmailImport() {
               {selectedIds.length > 0 && (
                 <>
                   <span className="text-sm text-muted-foreground">เลือก {selectedIds.length} รายการ</span>
+                  {(() => {
+                    const selectable = rows.filter(
+                      (r) => selectedIds.includes(r.id) && !r.po_id && (r.status === 'FETCHED' || r.status === 'ERROR'),
+                    );
+                    return (
+                      <Button
+                        size="sm"
+                        disabled={!selectable.length || batchRunning || !!processingId}
+                        onClick={async () => {
+                          await processAll(selectable, true);
+                          setSelectedIds([]);
+                        }}
+                      >
+                        {batchRunning ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Play className="w-4 h-4 mr-1" />}
+                        วิเคราะห์ที่เลือก ({selectable.length})
+                      </Button>
+                    );
+                  })()}
                   <Button size="sm" variant="destructive" onClick={() => setConfirmOpen(true)}>
                     <Trash2 className="w-4 h-4 mr-1" /> ลบที่เลือก
                   </Button>
